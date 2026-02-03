@@ -11,6 +11,7 @@ import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
 import SiteVisits from "./pages/SiteVisits";
 import Quotations from "./pages/Quotations";
+import QuotationPreview from "./pages/QuotationPreview";
 import Payments from "./pages/Payments";
 import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
@@ -67,6 +68,7 @@ const AppRoutes = () => (
     <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
     <Route path="/site-visits" element={<ProtectedRoute><SiteVisits /></ProtectedRoute>} />
     <Route path="/quotations" element={<ProtectedRoute><Quotations /></ProtectedRoute>} />
+    <Route path="/quotations/:id" element={<ProtectedRoute><QuotationPreview /></ProtectedRoute>} />
     <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
     <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
