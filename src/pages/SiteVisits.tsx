@@ -100,7 +100,9 @@ const SiteVisits = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {leadsNeedingVisit.length === 0 ? (
-                        <SelectItem value="" disabled>No leads available for site visit</SelectItem>
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          No leads available for site visit
+                        </div>
                       ) : (
                         leadsNeedingVisit.map((lead) => (
                           <SelectItem key={lead.id} value={lead.id}>
