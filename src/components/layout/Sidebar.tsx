@@ -13,23 +13,31 @@ import {
   Sun,
   ChevronLeft,
   ChevronRight,
+  Shield,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Users, label: "Leads", path: "/leads" },
-  { icon: FolderKanban, label: "Projects", path: "/projects" },
-  { icon: ClipboardList, label: "Tasks", path: "/tasks" },
-  { icon: Calendar, label: "Site Visits", path: "/site-visits" },
-  { icon: FileText, label: "Quotations", path: "/quotations" },
-  { icon: DollarSign, label: "Payments", path: "/payments" },
-  { icon: FileCheck, label: "Documents", path: "/documents" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false },
+  { icon: Users, label: "Leads", path: "/leads", adminOnly: false },
+  { icon: FolderKanban, label: "Projects", path: "/projects", adminOnly: false },
+  { icon: ClipboardList, label: "Tasks", path: "/tasks", adminOnly: false },
+  { icon: Calendar, label: "Site Visits", path: "/site-visits", adminOnly: false },
+  { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: false },
+  { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: false },
+  { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: false },
+  { icon: Settings, label: "Settings", path: "/settings", adminOnly: false },
+  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { isAdmin } = useAuth();
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.adminOnly || isAdmin()
+  );
 
   return (
     <aside
@@ -54,7 +62,7 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <li key={item.path}>
