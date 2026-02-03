@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, FileText, Download, Send, Loader2, MessageCircle } from "lucide-react";
+import { Plus, MoreHorizontal, FileText, Download, Send, Loader2, MessageCircle, Eye, Edit2 } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { generateQuotationPdf } from "@/utils/quotationPdf";
 import { shareQuotationViaWhatsApp } from "@/utils/whatsappShare";
@@ -159,9 +159,19 @@ const Quotations = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="gap-2">
-                            <FileText className="h-4 w-4" />
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => navigate(`/quotations/${quotation.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
                             View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => navigate(`/quotations/${quotation.id}?edit=true`)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                            Edit Quotation
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2"

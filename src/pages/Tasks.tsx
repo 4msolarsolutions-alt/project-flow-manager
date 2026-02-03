@@ -55,7 +55,8 @@ interface TaskCardProps {
 }
 
 const TaskCard = ({ task, completed = false, onStatusChange }: TaskCardProps) => {
-  const assigneeName = task.assigned_to_profile?.first_name || 'Unassigned';
+  const profile = task.profiles;
+  const assigneeName = profile?.first_name || 'Unassigned';
   
   return (
     <div className="rounded-lg bg-card border border-border p-4 transition-all hover:shadow-sm">
