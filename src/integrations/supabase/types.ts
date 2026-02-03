@@ -616,6 +616,10 @@ export type Database = {
           building_type: Database["public"]["Enums"]["building_type"] | null
           completed_at: string | null
           created_at: string | null
+          customer_approval_breaker: boolean | null
+          customer_approval_cable: boolean | null
+          customer_approval_inverter: boolean | null
+          customer_approval_panel: boolean | null
           customer_feedback: string | null
           dc_length: number | null
           earth_length: number | null
@@ -633,10 +637,12 @@ export type Database = {
           panel_loading: Database["public"]["Enums"]["panel_loading"] | null
           recommended_capacity: number | null
           roof_area: number | null
+          roof_diagram_url: string | null
           roof_length: number | null
           roof_width: number | null
           scheduled_date: string | null
           scheduled_time: string | null
+          site_photos: Json | null
           status: string | null
           structure_height: number | null
           structure_material:
@@ -652,6 +658,10 @@ export type Database = {
           building_type?: Database["public"]["Enums"]["building_type"] | null
           completed_at?: string | null
           created_at?: string | null
+          customer_approval_breaker?: boolean | null
+          customer_approval_cable?: boolean | null
+          customer_approval_inverter?: boolean | null
+          customer_approval_panel?: boolean | null
           customer_feedback?: string | null
           dc_length?: number | null
           earth_length?: number | null
@@ -669,10 +679,12 @@ export type Database = {
           panel_loading?: Database["public"]["Enums"]["panel_loading"] | null
           recommended_capacity?: number | null
           roof_area?: number | null
+          roof_diagram_url?: string | null
           roof_length?: number | null
           roof_width?: number | null
           scheduled_date?: string | null
           scheduled_time?: string | null
+          site_photos?: Json | null
           status?: string | null
           structure_height?: number | null
           structure_material?:
@@ -688,6 +700,10 @@ export type Database = {
           building_type?: Database["public"]["Enums"]["building_type"] | null
           completed_at?: string | null
           created_at?: string | null
+          customer_approval_breaker?: boolean | null
+          customer_approval_cable?: boolean | null
+          customer_approval_inverter?: boolean | null
+          customer_approval_panel?: boolean | null
           customer_feedback?: string | null
           dc_length?: number | null
           earth_length?: number | null
@@ -705,10 +721,12 @@ export type Database = {
           panel_loading?: Database["public"]["Enums"]["panel_loading"] | null
           recommended_capacity?: number | null
           roof_area?: number | null
+          roof_diagram_url?: string | null
           roof_length?: number | null
           roof_width?: number | null
           scheduled_date?: string | null
           scheduled_time?: string | null
+          site_photos?: Json | null
           status?: string | null
           structure_height?: number | null
           structure_material?:
