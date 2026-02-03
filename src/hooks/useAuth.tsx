@@ -26,6 +26,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, userData?: { first_name?: string; last_name?: string; login_type?: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   isAdmin: () => boolean;
   hasRole: (role: string) => boolean;
   isEmployee: () => boolean;
@@ -136,6 +137,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   const isAdmin = () => roles.includes('admin');
   const hasRole = (role: string) => roles.includes(role);
   const isEmployee = () => profile?.login_type === 'employee';
@@ -151,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
+      refreshProfile,
       isAdmin,
       hasRole,
       isEmployee,
