@@ -29,6 +29,7 @@ import { useLeads } from "@/hooks/useLeads";
 import { useSiteVisits } from "@/hooks/useSiteVisits";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/hooks/useAuth";
+import { CreateQuotationDialog } from "@/components/quotations/CreateQuotationDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -70,6 +71,7 @@ const Leads = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -184,6 +186,11 @@ const Leads = () => {
       notes: lead.notes || "",
     });
     setIsConvertDialogOpen(true);
+  };
+
+  const openQuotationDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setIsQuotationDialogOpen(true);
   };
 
   const handleConvertToProject = async (e: React.FormEvent) => {
@@ -360,7 +367,9 @@ const Leads = () => {
                           <DropdownMenuItem onClick={() => openScheduleDialog(lead)}>
                             Schedule Site Visit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Create Quotation</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openQuotationDialog(lead)}>
+                            Create Quotation
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openConvertDialog(lead)}>
                             Convert to Project
                           </DropdownMenuItem>
@@ -676,6 +685,13 @@ const Leads = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Quotation Dialog */}
+      <CreateQuotationDialog
+        open={isQuotationDialogOpen}
+        onOpenChange={setIsQuotationDialogOpen}
+        selectedLead={selectedLead}
+      />
     </Layout>
   );
 };
