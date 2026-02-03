@@ -72,6 +72,8 @@ const Leads = () => {
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -191,6 +193,63 @@ const Leads = () => {
   const openQuotationDialog = (lead: Lead) => {
     setSelectedLead(lead);
     setIsQuotationDialogOpen(true);
+  };
+
+  const openViewDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setIsViewDialogOpen(true);
+  };
+
+  const openEditDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setFormData({
+      customer_name: lead.customer_name,
+      phone: lead.phone,
+      email: lead.email || "",
+      address: lead.address,
+      city: lead.city || "",
+      state: lead.state || "",
+      pincode: lead.pincode || "",
+      project_type: lead.project_type,
+      lead_source: lead.lead_source || "",
+      notes: lead.notes || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      await updateLead.mutateAsync({
+        id: selectedLead.id,
+        ...formData,
+      });
+      
+      setIsEditDialogOpen(false);
+      setSelectedLead(null);
+      resetFormData();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetFormData = () => {
+    setFormData({
+      customer_name: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      project_type: "epc",
+      lead_source: "",
+      notes: "",
+    });
   };
 
   const handleConvertToProject = async (e: React.FormEvent) => {
@@ -362,8 +421,12 @@ const Leads = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
-                          <DropdownMenuItem>Edit Lead</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openViewDialog(lead)}>
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditDialog(lead)}>
+                            Edit Lead
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openScheduleDialog(lead)}>
                             Schedule Site Visit
                           </DropdownMenuItem>
@@ -692,6 +755,241 @@ const Leads = () => {
         onOpenChange={setIsQuotationDialogOpen}
         selectedLead={selectedLead}
       />
+
+      {/* View Lead Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Lead Details</DialogTitle>
+          </DialogHeader>
+          {selectedLead && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Customer Name</p>
+                  <p className="font-medium">{selectedLead.customer_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-medium">{selectedLead.phone}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium">{selectedLead.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Project Type</p>
+                  <p className="font-medium capitalize">{selectedLead.project_type}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm text-muted-foreground">Address</p>
+                <p className="font-medium">{selectedLead.address}</p>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">City</p>
+                  <p className="font-medium">{selectedLead.city || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">State</p>
+                  <p className="font-medium">{selectedLead.state || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Pincode</p>
+                  <p className="font-medium">{selectedLead.pincode || '-'}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Lead Source</p>
+                  <p className="font-medium capitalize">{selectedLead.lead_source?.replace(/_/g, ' ') || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(selectedLead.status)}`}>
+                    {formatStatus(selectedLead.status)}
+                  </span>
+                </div>
+              </div>
+              
+              {selectedLead.notes && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Notes</p>
+                  <p className="font-medium">{selectedLead.notes}</p>
+                </div>
+              )}
+              
+              <div>
+                <p className="text-sm text-muted-foreground">Created At</p>
+                <p className="font-medium">{selectedLead.created_at ? formatDate(selectedLead.created_at) : '-'}</p>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  setIsViewDialogOpen(false);
+                  openEditDialog(selectedLead);
+                }}>
+                  Edit Lead
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Lead</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditLead} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_customer_name">Customer Name *</Label>
+                <Input
+                  id="edit_customer_name"
+                  value={formData.customer_name}
+                  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_phone">Phone *</Label>
+                <Input
+                  id="edit_phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_email">Email</Label>
+                <Input
+                  id="edit_email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_project_type">Project Type *</Label>
+                <Select
+                  value={formData.project_type}
+                  onValueChange={(value: "epc" | "service" | "oam") => setFormData({ ...formData, project_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="epc">EPC</SelectItem>
+                    <SelectItem value="service">Service</SelectItem>
+                    <SelectItem value="oam">O&M</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_address">Address *</Label>
+              <Input
+                id="edit_address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_city">City</Label>
+                <Input
+                  id="edit_city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_state">State</Label>
+                <Input
+                  id="edit_state"
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_pincode">Pincode</Label>
+                <Input
+                  id="edit_pincode"
+                  value={formData.pincode}
+                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_lead_source">Lead Source</Label>
+              <Select
+                value={formData.lead_source}
+                onValueChange={(value) => setFormData({ ...formData, lead_source: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">Website</SelectItem>
+                  <SelectItem value="referral">Referral</SelectItem>
+                  <SelectItem value="cold_call">Cold Call</SelectItem>
+                  <SelectItem value="social_media">Social Media</SelectItem>
+                  <SelectItem value="advertisement">Advertisement</SelectItem>
+                  <SelectItem value="walk_in">Walk-in</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit_notes">Notes</Label>
+              <Textarea
+                id="edit_notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Additional notes about the lead..."
+                rows={3}
+              />
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
