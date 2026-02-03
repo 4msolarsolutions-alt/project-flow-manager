@@ -159,3 +159,38 @@ export function useUpdateProfile() {
     },
   });
 }
+
+export function useCreateEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      first_name: string;
+      last_name: string | null;
+      email: string;
+      phone: string | null;
+      roles: AppRole[];
+    }) => {
+      const { data, error } = await supabase.functions.invoke("admin-create-employee", {
+        body: payload,
+      });
+
+      if (error) throw error;
+      return data as { id: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Employee created",
+        description: "Invite email sent. The employee will appear in dropdowns once created.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error creating employee",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}

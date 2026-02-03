@@ -29,6 +29,7 @@ import { useUsers, type UserWithRoles } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { UserStatusDialog } from "@/components/admin/UserStatusDialog";
+import { AddEmployeeDialog } from "@/components/admin/AddEmployeeDialog";
 import {
   Search,
   Filter,
@@ -73,6 +74,7 @@ const Admin = () => {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
 
   // Check admin access
   if (!isAdmin()) {
@@ -181,6 +183,12 @@ const Admin = () => {
               <SelectItem value="customer">Customer</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="flex items-center justify-end">
+          <Button onClick={() => setAddEmployeeOpen(true)}>
+            Add Employee
+          </Button>
         </div>
       </div>
 
@@ -355,6 +363,8 @@ const Admin = () => {
         open={statusDialogOpen}
         onOpenChange={statusDialogOpen ? setStatusDialogOpen : () => {}}
       />
+
+      <AddEmployeeDialog open={addEmployeeOpen} onOpenChange={setAddEmployeeOpen} />
     </Layout>
   );
 };
