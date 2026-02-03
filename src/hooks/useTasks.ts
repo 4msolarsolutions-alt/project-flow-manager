@@ -20,6 +20,12 @@ export function useTasks(projectId?: string) {
           *,
           projects (
             project_name
+          ),
+          assigned_to_profile:profiles!tasks_assigned_to_fkey (
+            id,
+            first_name,
+            last_name,
+            email
           )
         `)
         .order('created_at', { ascending: false });
