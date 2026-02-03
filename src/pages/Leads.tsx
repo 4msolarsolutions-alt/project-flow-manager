@@ -26,7 +26,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Search, Filter, MoreHorizontal, Phone, MapPin, Calendar, Loader2 } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
+import { useSiteVisits } from "@/hooks/useSiteVisits";
 import { useAuth } from "@/hooks/useAuth";
+import type { Database } from "@/integrations/supabase/types";
+
+type Lead = Database['public']['Tables']['leads']['Row'];
 
 const getStatusClass = (status: string) => {
   switch (status) {
@@ -56,11 +60,14 @@ const formatStatus = (status: string) => {
 };
 
 const Leads = () => {
-  const { leads, isLoading, createLead } = useLeads();
+  const { leads, isLoading, createLead, updateLead } = useLeads();
+  const { createSiteVisit } = useSiteVisits();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -74,6 +81,11 @@ const Leads = () => {
     project_type: "epc" as "epc" | "service" | "oam",
     lead_source: "",
     notes: "",
+  });
+
+  const [scheduleData, setScheduleData] = useState({
+    scheduled_date: "",
+    scheduled_time: "",
   });
 
   const filteredLeads = leads?.filter((lead) => {
@@ -113,6 +125,40 @@ const Leads = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleScheduleSiteVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      await createSiteVisit.mutateAsync({
+        lead_id: selectedLead.id,
+        scheduled_date: scheduleData.scheduled_date,
+        scheduled_time: scheduleData.scheduled_time,
+        engineer_id: user?.id,
+        status: 'scheduled',
+      });
+      
+      // Update lead status
+      await updateLead.mutateAsync({
+        id: selectedLead.id,
+        status: 'site_visit_assigned',
+      });
+      
+      setIsScheduleDialogOpen(false);
+      setSelectedLead(null);
+      setScheduleData({ scheduled_date: "", scheduled_time: "" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openScheduleDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setIsScheduleDialogOpen(true);
   };
 
   const formatDate = (dateStr: string) => {
@@ -245,7 +291,9 @@ const Leads = () => {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>View Details</DropdownMenuItem>
                           <DropdownMenuItem>Edit Lead</DropdownMenuItem>
-                          <DropdownMenuItem>Schedule Site Visit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openScheduleDialog(lead)}>
+                            Schedule Site Visit
+                          </DropdownMenuItem>
                           <DropdownMenuItem>Create Quotation</DropdownMenuItem>
                           <DropdownMenuItem>Convert to Project</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -400,6 +448,64 @@ const Leads = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Site Visit Dialog */}
+      <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Schedule Site Visit</DialogTitle>
+          </DialogHeader>
+          {selectedLead && (
+            <form onSubmit={handleScheduleSiteVisit} className="space-y-4">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="font-medium">{selectedLead.customer_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedLead.address}</p>
+                <p className="text-sm text-muted-foreground">{selectedLead.phone}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled_date">Date *</Label>
+                  <Input
+                    id="scheduled_date"
+                    type="date"
+                    value={scheduleData.scheduled_date}
+                    onChange={(e) => setScheduleData({ ...scheduleData, scheduled_date: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled_time">Time *</Label>
+                  <Input
+                    id="scheduled_time"
+                    type="time"
+                    value={scheduleData.scheduled_time}
+                    onChange={(e) => setScheduleData({ ...scheduleData, scheduled_time: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Scheduling...
+                    </>
+                  ) : (
+                    "Schedule Visit"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </Layout>
