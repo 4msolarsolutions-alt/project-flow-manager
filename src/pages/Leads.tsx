@@ -27,6 +27,7 @@ import {
 import { Plus, Search, Filter, MoreHorizontal, Phone, MapPin, Calendar, Loader2 } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
 import { useSiteVisits } from "@/hooks/useSiteVisits";
+import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -62,13 +63,24 @@ const formatStatus = (status: string) => {
 const Leads = () => {
   const { leads, isLoading, createLead, updateLead } = useLeads();
   const { createSiteVisit } = useSiteVisits();
+  const { createProject } = useProjects();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [convertData, setConvertData] = useState({
+    project_name: "",
+    capacity_kw: "",
+    start_date: "",
+    expected_end_date: "",
+    total_amount: "",
+    notes: "",
+  });
   
   const [formData, setFormData] = useState({
     customer_name: "",
@@ -159,6 +171,60 @@ const Leads = () => {
   const openScheduleDialog = (lead: Lead) => {
     setSelectedLead(lead);
     setIsScheduleDialogOpen(true);
+  };
+
+  const openConvertDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setConvertData({
+      project_name: `${lead.customer_name} - ${lead.project_type.toUpperCase()}`,
+      capacity_kw: "",
+      start_date: new Date().toISOString().split('T')[0],
+      expected_end_date: "",
+      total_amount: "",
+      notes: lead.notes || "",
+    });
+    setIsConvertDialogOpen(true);
+  };
+
+  const handleConvertToProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      await createProject.mutateAsync({
+        project_name: convertData.project_name,
+        project_type: selectedLead.project_type,
+        lead_id: selectedLead.id,
+        pm_id: user?.id,
+        capacity_kw: convertData.capacity_kw ? parseFloat(convertData.capacity_kw) : null,
+        start_date: convertData.start_date || null,
+        expected_end_date: convertData.expected_end_date || null,
+        total_amount: convertData.total_amount ? parseFloat(convertData.total_amount) : null,
+        notes: convertData.notes || null,
+        status: 'planning',
+      });
+      
+      // Update lead status
+      await updateLead.mutateAsync({
+        id: selectedLead.id,
+        status: 'customer_approved',
+      });
+      
+      setIsConvertDialogOpen(false);
+      setSelectedLead(null);
+      setConvertData({
+        project_name: "",
+        capacity_kw: "",
+        start_date: "",
+        expected_end_date: "",
+        total_amount: "",
+        notes: "",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -295,7 +361,9 @@ const Leads = () => {
                             Schedule Site Visit
                           </DropdownMenuItem>
                           <DropdownMenuItem>Create Quotation</DropdownMenuItem>
-                          <DropdownMenuItem>Convert to Project</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openConvertDialog(lead)}>
+                            Convert to Project
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -501,6 +569,106 @@ const Leads = () => {
                     </>
                   ) : (
                     "Schedule Visit"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Project Dialog */}
+      <Dialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Convert to Project</DialogTitle>
+          </DialogHeader>
+          {selectedLead && (
+            <form onSubmit={handleConvertToProject} className="space-y-4">
+              <div className="rounded-lg bg-muted p-3">
+                <p className="font-medium">{selectedLead.customer_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedLead.address}</p>
+                <p className="text-sm text-muted-foreground">Type: {selectedLead.project_type.toUpperCase()}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="project_name">Project Name *</Label>
+                <Input
+                  id="project_name"
+                  value={convertData.project_name}
+                  onChange={(e) => setConvertData({ ...convertData, project_name: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="capacity_kw">Capacity (kW)</Label>
+                  <Input
+                    id="capacity_kw"
+                    type="number"
+                    step="0.1"
+                    value={convertData.capacity_kw}
+                    onChange={(e) => setConvertData({ ...convertData, capacity_kw: e.target.value })}
+                    placeholder="e.g., 5.0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="total_amount">Total Amount (₹)</Label>
+                  <Input
+                    id="total_amount"
+                    type="number"
+                    value={convertData.total_amount}
+                    onChange={(e) => setConvertData({ ...convertData, total_amount: e.target.value })}
+                    placeholder="e.g., 500000"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start_date">Start Date</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={convertData.start_date}
+                    onChange={(e) => setConvertData({ ...convertData, start_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expected_end_date">Expected End Date</Label>
+                  <Input
+                    id="expected_end_date"
+                    type="date"
+                    value={convertData.expected_end_date}
+                    onChange={(e) => setConvertData({ ...convertData, expected_end_date: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="convert_notes">Notes</Label>
+                <Textarea
+                  id="convert_notes"
+                  value={convertData.notes}
+                  onChange={(e) => setConvertData({ ...convertData, notes: e.target.value })}
+                  placeholder="Project notes..."
+                  rows={3}
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsConvertDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Converting...
+                    </>
+                  ) : (
+                    "Convert to Project"
                   )}
                 </Button>
               </DialogFooter>
