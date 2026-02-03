@@ -6,10 +6,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, FileText, Download, Send, Loader2 } from "lucide-react";
+import { Plus, MoreHorizontal, FileText, Download, Send, Loader2, MessageCircle } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { generateQuotationPdf } from "@/utils/quotationPdf";
+import { shareQuotationViaWhatsApp } from "@/utils/whatsappShare";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const getStatusClass = (status: string) => {
   switch (status) {
@@ -58,6 +60,7 @@ const getValidUntilDate = (createdAt: string | null, validityDays: number | null
 const Quotations = () => {
   const { quotations, isLoading, sendQuotation } = useQuotations();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleDownloadPdf = (quotation: any) => {
     generateQuotationPdf(quotation);
@@ -65,6 +68,18 @@ const Quotations = () => {
 
   const handleSendQuotation = async (id: string) => {
     await sendQuotation.mutateAsync(id);
+  };
+
+  const handleWhatsAppShare = (quotation: any) => {
+    if (!quotation.leads?.phone) {
+      toast({
+        title: "No Phone Number",
+        description: "Customer phone number is not available for this quotation.",
+        variant: "destructive",
+      });
+      return;
+    }
+    shareQuotationViaWhatsApp(quotation);
   };
 
   return (
@@ -154,6 +169,13 @@ const Quotations = () => {
                           >
                             <Download className="h-4 w-4" />
                             Download PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2"
+                            onClick={() => handleWhatsAppShare(quotation)}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            Share via WhatsApp
                           </DropdownMenuItem>
                           {quotation.status === 'draft' && (
                             <DropdownMenuItem 
