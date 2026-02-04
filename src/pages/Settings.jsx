@@ -59,7 +59,7 @@ const Settings = () => {
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message,

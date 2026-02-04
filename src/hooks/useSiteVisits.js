@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
-
-type SiteVisit = Database['public']['Tables']['site_visits']['Row'];
-type SiteVisitInsert = Database['public']['Tables']['site_visits']['Insert'];
-type SiteVisitUpdate = Database['public']['Tables']['site_visits']['Update'];
 
 export function useSiteVisits() {
   const queryClient = useQueryClient();
@@ -32,7 +27,7 @@ export function useSiteVisits() {
   });
 
   const createSiteVisit = useMutation({
-    mutationFn: async (visit: SiteVisitInsert) => {
+    mutationFn: async (visit) => {
       const { data, error } = await supabase
         .from('site_visits')
         .insert(visit)
@@ -50,7 +45,7 @@ export function useSiteVisits() {
         description: 'Site visit has been scheduled successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -60,7 +55,7 @@ export function useSiteVisits() {
   });
 
   const updateSiteVisit = useMutation({
-    mutationFn: async ({ id, ...updates }: SiteVisitUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('site_visits')
         .update(updates)
@@ -78,7 +73,7 @@ export function useSiteVisits() {
         description: 'Site visit details have been updated.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -88,7 +83,7 @@ export function useSiteVisits() {
   });
 
   const completeSiteVisit = useMutation({
-    mutationFn: async ({ id, ...data }: SiteVisitUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...data }) => {
       const { error } = await supabase
         .from('site_visits')
         .update({
@@ -108,7 +103,7 @@ export function useSiteVisits() {
         description: 'Site visit has been marked as completed.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -127,7 +122,7 @@ export function useSiteVisits() {
   };
 }
 
-export function useSiteVisit(id: string | undefined) {
+export function useSiteVisit(id) {
   return useQuery({
     queryKey: ['site_visits', id],
     queryFn: async () => {

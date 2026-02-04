@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
-
-type Quotation = Database['public']['Tables']['quotations']['Row'];
-type QuotationInsert = Database['public']['Tables']['quotations']['Insert'];
-type QuotationUpdate = Database['public']['Tables']['quotations']['Update'];
 
 export function useQuotations() {
   const queryClient = useQueryClient();
@@ -32,7 +27,7 @@ export function useQuotations() {
   });
 
   const createQuotation = useMutation({
-    mutationFn: async (quotation: QuotationInsert) => {
+    mutationFn: async (quotation) => {
       const { data, error } = await supabase
         .from('quotations')
         .insert(quotation)
@@ -50,7 +45,7 @@ export function useQuotations() {
         description: 'New quotation has been created successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -60,7 +55,7 @@ export function useQuotations() {
   });
 
   const updateQuotation = useMutation({
-    mutationFn: async ({ id, ...updates }: QuotationUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('quotations')
         .update(updates)
@@ -78,7 +73,7 @@ export function useQuotations() {
         description: 'Quotation has been updated successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -88,7 +83,7 @@ export function useQuotations() {
   });
 
   const sendQuotation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { data, error } = await supabase
         .from('quotations')
         .update({
@@ -109,7 +104,7 @@ export function useQuotations() {
         description: 'Quotation has been sent to the customer.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -119,7 +114,7 @@ export function useQuotations() {
   });
 
   const deleteQuotation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { error } = await supabase
         .from('quotations')
         .delete()
@@ -134,7 +129,7 @@ export function useQuotations() {
         description: 'Quotation has been removed.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -154,7 +149,7 @@ export function useQuotations() {
   };
 }
 
-export function useQuotation(id: string | undefined) {
+export function useQuotation(id) {
   return useQuery({
     queryKey: ['quotations', id],
     queryFn: async () => {

@@ -27,8 +27,8 @@ const Auth = () => {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [loginType, setLoginType] = useState<string>("employee");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loginType, setLoginType] = useState("employee");
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -37,7 +37,7 @@ const Auth = () => {
   }, [user, authLoading, navigate]);
 
   const validateLogin = () => {
-    const newErrors: Record<string, string> = {};
+    const newErrors = {};
     
     try {
       emailSchema.parse(loginEmail);
@@ -60,7 +60,7 @@ const Auth = () => {
   };
 
   const validateSignup = () => {
-    const newErrors: Record<string, string> = {};
+    const newErrors = {};
     
     if (!firstName.trim()) {
       newErrors.firstName = "First name is required";
@@ -90,7 +90,7 @@ const Auth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!validateLogin()) return;
     
@@ -115,7 +115,7 @@ const Auth = () => {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     if (!validateSignup()) return;
     
