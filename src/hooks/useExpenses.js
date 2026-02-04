@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Expense = Database['public']['Tables']['expenses']['Row'];
-type ExpenseInsert = Database['public']['Tables']['expenses']['Insert'];
-type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'];
-
-export function useExpenses(projectId?: string) {
+export function useExpenses(projectId) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -35,7 +30,7 @@ export function useExpenses(projectId?: string) {
   });
 
   const createExpense = useMutation({
-    mutationFn: async (expense: ExpenseInsert) => {
+    mutationFn: async (expense) => {
       // Auto-calculate amount for food expenses
       let amount = expense.amount;
       if (expense.expense_type === 'food' && expense.persons && expense.days) {
@@ -58,7 +53,7 @@ export function useExpenses(projectId?: string) {
         description: 'Expense has been recorded successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -68,7 +63,7 @@ export function useExpenses(projectId?: string) {
   });
 
   const updateExpense = useMutation({
-    mutationFn: async ({ id, ...updates }: ExpenseUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('expenses')
         .update(updates)
@@ -86,7 +81,7 @@ export function useExpenses(projectId?: string) {
         description: 'Expense has been updated successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -96,7 +91,7 @@ export function useExpenses(projectId?: string) {
   });
 
   const approveExpense = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       const { data, error } = await supabase
@@ -119,7 +114,7 @@ export function useExpenses(projectId?: string) {
         description: 'Expense has been approved.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -129,7 +124,7 @@ export function useExpenses(projectId?: string) {
   });
 
   const deleteExpense = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { error } = await supabase
         .from('expenses')
         .delete()
@@ -144,7 +139,7 @@ export function useExpenses(projectId?: string) {
         description: 'Expense has been removed.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,

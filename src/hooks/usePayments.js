@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Payment = Database['public']['Tables']['payments']['Row'];
-type PaymentInsert = Database['public']['Tables']['payments']['Insert'];
-type PaymentUpdate = Database['public']['Tables']['payments']['Update'];
-
-export function usePayments(projectId?: string) {
+export function usePayments(projectId) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -38,7 +33,7 @@ export function usePayments(projectId?: string) {
   });
 
   const createPayment = useMutation({
-    mutationFn: async (payment: PaymentInsert) => {
+    mutationFn: async (payment) => {
       const { data, error } = await supabase
         .from('payments')
         .insert(payment)
@@ -55,7 +50,7 @@ export function usePayments(projectId?: string) {
         description: 'Payment has been recorded successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -65,7 +60,7 @@ export function usePayments(projectId?: string) {
   });
 
   const updatePayment = useMutation({
-    mutationFn: async ({ id, ...updates }: PaymentUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('payments')
         .update(updates)
@@ -83,7 +78,7 @@ export function usePayments(projectId?: string) {
         description: 'Payment has been updated successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -93,7 +88,7 @@ export function usePayments(projectId?: string) {
   });
 
   const deletePayment = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { error } = await supabase
         .from('payments')
         .delete()
@@ -108,7 +103,7 @@ export function usePayments(projectId?: string) {
         description: 'Payment has been removed.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,

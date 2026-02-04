@@ -1,34 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Lead = Database['public']['Tables']['leads']['Row'];
-type LeadInsert = Database['public']['Tables']['leads']['Insert'];
-type LeadUpdate = Database['public']['Tables']['leads']['Update'];
-
-export function useLeads() {
+export function useProjects() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: leads, isLoading, error } = useQuery({
-    queryKey: ['leads'],
+  const { data: projects, isLoading, error } = useQuery({
+    queryKey: ['projects'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('leads')
-        .select('*')
+        .from('projects')
+        .select(`
+          *,
+          leads (
+            customer_name,
+            phone,
+            address
+          )
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as Lead[];
+      return data;
     },
   });
 
-  const createLead = useMutation({
-    mutationFn: async (lead: LeadInsert) => {
+  const createProject = useMutation({
+    mutationFn: async (project) => {
       const { data, error } = await supabase
-        .from('leads')
-        .insert(lead)
+        .from('projects')
+        .insert(project)
         .select()
         .single();
       
@@ -36,13 +38,13 @@ export function useLeads() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast({
-        title: 'Lead Created',
-        description: 'New lead has been added successfully.',
+        title: 'Project Created',
+        description: 'New project has been created successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -51,10 +53,10 @@ export function useLeads() {
     },
   });
 
-  const updateLead = useMutation({
-    mutationFn: async ({ id, ...updates }: LeadUpdate & { id: string }) => {
+  const updateProject = useMutation({
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
-        .from('leads')
+        .from('projects')
         .update(updates)
         .eq('id', id)
         .select()
@@ -64,13 +66,13 @@ export function useLeads() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast({
-        title: 'Lead Updated',
-        description: 'Lead has been updated successfully.',
+        title: 'Project Updated',
+        description: 'Project has been updated successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -79,23 +81,23 @@ export function useLeads() {
     },
   });
 
-  const deleteLead = useMutation({
-    mutationFn: async (id: string) => {
+  const deleteProject = useMutation({
+    mutationFn: async (id) => {
       const { error } = await supabase
-        .from('leads')
+        .from('projects')
         .delete()
         .eq('id', id);
       
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast({
-        title: 'Lead Deleted',
-        description: 'Lead has been removed.',
+        title: 'Project Deleted',
+        description: 'Project has been removed.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -105,28 +107,36 @@ export function useLeads() {
   });
 
   return {
-    leads,
+    projects,
     isLoading,
     error,
-    createLead,
-    updateLead,
-    deleteLead,
+    createProject,
+    updateProject,
+    deleteProject,
   };
 }
 
-export function useLead(id: string | undefined) {
+export function useProject(id) {
   return useQuery({
-    queryKey: ['leads', id],
+    queryKey: ['projects', id],
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
-        .from('leads')
-        .select('*')
+        .from('projects')
+        .select(`
+          *,
+          leads (
+            customer_name,
+            phone,
+            address,
+            email
+          )
+        `)
         .eq('id', id)
         .maybeSingle();
       
       if (error) throw error;
-      return data as Lead | null;
+      return data;
     },
     enabled: !!id,
   });

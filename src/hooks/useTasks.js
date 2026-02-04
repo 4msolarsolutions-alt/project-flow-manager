@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Task = Database['public']['Tables']['tasks']['Row'];
-type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
-type TaskUpdate = Database['public']['Tables']['tasks']['Update'];
-
-export function useTasks(projectId?: string) {
+export function useTasks(projectId) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -41,7 +36,7 @@ export function useTasks(projectId?: string) {
   });
 
   const createTask = useMutation({
-    mutationFn: async (task: TaskInsert) => {
+    mutationFn: async (task) => {
       const { data, error } = await supabase
         .from('tasks')
         .insert(task)
@@ -58,7 +53,7 @@ export function useTasks(projectId?: string) {
         description: 'New task has been assigned successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -68,7 +63,7 @@ export function useTasks(projectId?: string) {
   });
 
   const updateTask = useMutation({
-    mutationFn: async ({ id, ...updates }: TaskUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('tasks')
         .update(updates)
@@ -86,7 +81,7 @@ export function useTasks(projectId?: string) {
         description: 'Task has been updated successfully.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -96,8 +91,8 @@ export function useTasks(projectId?: string) {
   });
 
   const updateTaskStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Task['status'] }) => {
-      const updates: TaskUpdate = { status };
+    mutationFn: async ({ id, status }) => {
+      const updates = { status };
       if (status === 'completed') {
         updates.completed_at = new Date().toISOString();
       }
@@ -115,7 +110,7 @@ export function useTasks(projectId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
@@ -125,7 +120,7 @@ export function useTasks(projectId?: string) {
   });
 
   const deleteTask = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -140,7 +135,7 @@ export function useTasks(projectId?: string) {
         description: 'Task has been removed.',
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,

@@ -23,7 +23,7 @@ import { Loader2 } from "lucide-react";
 const queryClient = new QueryClient();
 
 // Protected Route component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -42,7 +42,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 // Public Route component (redirect if logged in)
-function PublicRoute({ children }: { children: React.ReactNode }) {
+function PublicRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) {

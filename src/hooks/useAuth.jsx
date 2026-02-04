@@ -1,48 +1,16 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Profile {
-  id: string;
-  login_type: 'admin' | 'employee' | 'customer';
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-  email: string | null;
-  company_name: string | null;
-  is_active: boolean;
-}
+const AuthContext = createContext(undefined);
 
-interface UserRole {
-  role: 'admin' | 'accounts' | 'hr' | 'project_manager' | 'senior_engineer' | 'site_supervisor' | 'solar_engineer' | 'junior_technician' | 'storekeeper';
-}
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
-  roles: string[];
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, userData?: { first_name?: string; last_name?: string; login_type?: string }) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  isAdmin: () => boolean;
-  hasRole: (role: string) => boolean;
-  isEmployee: () => boolean;
-  isCustomer: () => boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<string[]>([]);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -50,18 +18,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (!error && data) {
-      setProfile(data as Profile);
+      setProfile(data);
     }
   };
 
-  const fetchRoles = async (userId: string) => {
+  const fetchRoles = async (userId) => {
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
 
     if (!error && data) {
-      setRoles(data.map((r: UserRole) => r.role));
+      setRoles(data.map((r) => r.role));
     }
   };
 
@@ -101,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -109,11 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (
-    email: string, 
-    password: string, 
-    userData?: { first_name?: string; last_name?: string; login_type?: string }
-  ) => {
+  const signUp = async (email, password, userData) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -144,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = () => roles.includes('admin');
-  const hasRole = (role: string) => roles.includes(role);
+  const hasRole = (role) => roles.includes(role);
   const isEmployee = () => profile?.login_type === 'employee';
   const isCustomer = () => profile?.login_type === 'customer';
 
