@@ -13,23 +13,37 @@ import {
   Sun,
   ChevronLeft,
   ChevronRight,
+  Shield,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Users, label: "Leads", path: "/leads" },
-  { icon: FolderKanban, label: "Projects", path: "/projects" },
-  { icon: ClipboardList, label: "Tasks", path: "/tasks" },
-  { icon: Calendar, label: "Site Visits", path: "/site-visits" },
-  { icon: FileText, label: "Quotations", path: "/quotations" },
-  { icon: DollarSign, label: "Payments", path: "/payments" },
-  { icon: FileCheck, label: "Documents", path: "/documents" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: true, employeeOnly: false },
+  { icon: LayoutDashboard, label: "My Dashboard", path: "/employee-dashboard", adminOnly: false, employeeOnly: true },
+  { icon: Users, label: "Leads", path: "/leads", adminOnly: false, employeeOnly: false },
+  { icon: FolderKanban, label: "Projects", path: "/projects", adminOnly: false, employeeOnly: false },
+  { icon: ClipboardList, label: "Tasks", path: "/tasks", adminOnly: false, employeeOnly: false },
+  { icon: Calendar, label: "Site Visits", path: "/site-visits", adminOnly: false, employeeOnly: false },
+  { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: false, employeeOnly: false },
+  { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: false, employeeOnly: false },
+  { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: false, employeeOnly: false },
+  { icon: Settings, label: "Settings", path: "/settings", adminOnly: false, employeeOnly: false },
+  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true, employeeOnly: false },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { isAdmin } = useAuth();
+
+  const visibleNavItems = navItems.filter((item) => {
+    // Admin-only items: show only to admins
+    if (item.adminOnly) return isAdmin();
+    // Employee-only items: show only to non-admins
+    if (item.employeeOnly) return !isAdmin();
+    // Regular items: show to everyone
+    return true;
+  });
 
   return (
     <aside
@@ -54,7 +68,7 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <li key={item.path}>
