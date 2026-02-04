@@ -13,12 +13,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, UserPlus } from "lucide-react";
 import { z } from "zod";
-import type { Database } from "@/integrations/supabase/types";
 import { useCreateEmployee } from "@/hooks/useUsers";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-
-const roleOptions: { role: AppRole; label: string }[] = [
+const roleOptions = [
   { role: "admin", label: "Admin" },
   { role: "accounts", label: "Accounts" },
   { role: "hr", label: "HR" },
@@ -46,20 +43,15 @@ const employeeSchema = z.object({
     ),
 });
 
-interface AddEmployeeDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps) {
+export function AddEmployeeDialog({ open, onOpenChange }) {
   const createEmployee = useCreateEmployee();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [selectedRoles, setSelectedRoles] = useState<Set<AppRole>>(new Set());
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedRoles, setSelectedRoles] = useState(new Set());
+  const [errors, setErrors] = useState({});
 
   const isLoading = createEmployee.isPending;
 
@@ -90,7 +82,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
       return parsed.data;
     }
 
-    const next: Record<string, string> = {};
+    const next = {};
     for (const issue of parsed.error.issues) {
       const key = String(issue.path[0] || "form");
       if (!next[key]) next[key] = issue.message;
@@ -99,7 +91,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const data = validate();
     if (!data) return;
@@ -116,7 +108,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
     onOpenChange(false);
   };
 
-  const toggleRole = (role: AppRole, checked: boolean) => {
+  const toggleRole = (role, checked) => {
     setSelectedRoles((prev) => {
       const next = new Set(prev);
       if (checked) next.add(role);
@@ -140,7 +132,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
             Add Employee
           </DialogTitle>
           <DialogDescription>
-            Creates an employee login and adds them to the system. They’ll receive an email to set their password.
+            Creates an employee login and adds them to the system. They'll receive an email to set their password.
           </DialogDescription>
         </DialogHeader>
 

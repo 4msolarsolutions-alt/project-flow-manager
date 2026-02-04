@@ -46,7 +46,7 @@ const leads = [
   },
 ];
 
-const getStatusClass = (status: string) => {
+const getStatusClass = (status) => {
   switch (status) {
     case "New":
       return "status-new";

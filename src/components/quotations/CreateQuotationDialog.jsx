@@ -21,28 +21,8 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
-import type { Database } from "@/integrations/supabase/types";
 
-type Lead = Database['public']['Tables']['leads']['Row'];
-
-interface BomItem {
-  id: string;
-  sno: number;
-  material: string;
-  make: string;
-  description: string;
-  quantity: number;
-  unit: string;
-  cost: number;
-}
-
-interface CreateQuotationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedLead?: Lead | null;
-}
-
-const defaultBomItems: Omit<BomItem, 'id' | 'sno'>[] = [
+const defaultBomItems = [
   { material: "Solar Module", make: "", description: "", quantity: 0, unit: "Nos", cost: 0 },
   { material: "Inverter", make: "", description: "", quantity: 1, unit: "Nos", cost: 0 },
   { material: "Monitoring System", make: "", description: "Data Monitoring", quantity: 1, unit: "Nos", cost: 0 },
@@ -63,7 +43,7 @@ const defaultBomItems: Omit<BomItem, 'id' | 'sno'>[] = [
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-export function CreateQuotationDialog({ open, onOpenChange, selectedLead }: CreateQuotationDialogProps) {
+export function CreateQuotationDialog({ open, onOpenChange, selectedLead }) {
   const { createQuotation } = useQuotations();
   const { updateLead } = useLeads();
   const { user } = useAuth();
@@ -82,7 +62,7 @@ export function CreateQuotationDialog({ open, onOpenChange, selectedLead }: Crea
 7. Civil work included as per site requirements.`,
   });
 
-  const [bomItems, setBomItems] = useState<BomItem[]>(
+  const [bomItems, setBomItems] = useState(
     defaultBomItems.map((item, index) => ({
       ...item,
       id: generateId(),
@@ -106,14 +86,14 @@ export function CreateQuotationDialog({ open, onOpenChange, selectedLead }: Crea
     ]);
   };
 
-  const removeBomItem = (id: string) => {
+  const removeBomItem = (id) => {
     setBomItems(bomItems.filter((item) => item.id !== id).map((item, index) => ({
       ...item,
       sno: index + 1,
     })));
   };
 
-  const updateBomItem = (id: string, field: keyof BomItem, value: string | number) => {
+  const updateBomItem = (id, field, value) => {
     setBomItems(
       bomItems.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
@@ -125,11 +105,11 @@ export function CreateQuotationDialog({ open, onOpenChange, selectedLead }: Crea
   const marginPercent = parseFloat(formData.margin_percent) || 0;
   const marginAmount = (subtotal * marginPercent) / 100;
   const totalBeforeGst = subtotal + marginAmount;
-  const gstAmount = totalBeforeGst * 0.09; // 9% GST
+  const gstAmount = totalBeforeGst * 0.09;
   const grandTotal = totalBeforeGst + gstAmount;
   const perWatt = formData.system_kw ? totalBeforeGst / (parseFloat(formData.system_kw) * 1000) : 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedLead) return;
     
@@ -149,7 +129,6 @@ export function CreateQuotationDialog({ open, onOpenChange, selectedLead }: Crea
         status: 'draft',
       });
       
-      // Update lead status
       await updateLead.mutateAsync({
         id: selectedLead.id,
         status: 'quotation_prepared',
@@ -178,7 +157,7 @@ export function CreateQuotationDialog({ open, onOpenChange, selectedLead }: Crea
     );
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',

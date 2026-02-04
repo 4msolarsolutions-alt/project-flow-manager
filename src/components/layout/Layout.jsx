@@ -1,17 +1,10 @@
-import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
-interface LayoutProps {
-  children: ReactNode;
-  title: string;
-}
-
-export function Layout({ children, title }: LayoutProps) {
+export function Layout({ children, title }) {
   const { signOut, profile, roles } = useAuth();
   const navigate = useNavigate();
 
