@@ -18,16 +18,17 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false },
-  { icon: Users, label: "Leads", path: "/leads", adminOnly: false },
-  { icon: FolderKanban, label: "Projects", path: "/projects", adminOnly: false },
-  { icon: ClipboardList, label: "Tasks", path: "/tasks", adminOnly: false },
-  { icon: Calendar, label: "Site Visits", path: "/site-visits", adminOnly: false },
-  { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: false },
-  { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: false },
-  { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: false },
-  { icon: Settings, label: "Settings", path: "/settings", adminOnly: false },
-  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: true, employeeOnly: false },
+  { icon: LayoutDashboard, label: "My Dashboard", path: "/employee-dashboard", adminOnly: false, employeeOnly: true },
+  { icon: Users, label: "Leads", path: "/leads", adminOnly: false, employeeOnly: false },
+  { icon: FolderKanban, label: "Projects", path: "/projects", adminOnly: false, employeeOnly: false },
+  { icon: ClipboardList, label: "Tasks", path: "/tasks", adminOnly: false, employeeOnly: false },
+  { icon: Calendar, label: "Site Visits", path: "/site-visits", adminOnly: false, employeeOnly: false },
+  { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: false, employeeOnly: false },
+  { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: false, employeeOnly: false },
+  { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: false, employeeOnly: false },
+  { icon: Settings, label: "Settings", path: "/settings", adminOnly: false, employeeOnly: false },
+  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true, employeeOnly: false },
 ];
 
 export function Sidebar() {
@@ -35,9 +36,14 @@ export function Sidebar() {
   const location = useLocation();
   const { isAdmin } = useAuth();
 
-  const visibleNavItems = navItems.filter(
-    (item) => !item.adminOnly || isAdmin()
-  );
+  const visibleNavItems = navItems.filter((item) => {
+    // Admin-only items: show only to admins
+    if (item.adminOnly) return isAdmin();
+    // Employee-only items: show only to non-admins
+    if (item.employeeOnly) return !isAdmin();
+    // Regular items: show to everyone
+    return true;
+  });
 
   return (
     <aside
