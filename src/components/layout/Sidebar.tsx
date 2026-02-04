@@ -17,18 +17,22 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
+// Navigation items with role-based visibility
+// adminOnly: true = only admins see it
+// employeeOnly: true = only employees see it  
+// both false = everyone sees it (but we filter further below for employees)
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: true, employeeOnly: false },
-  { icon: LayoutDashboard, label: "My Dashboard", path: "/employee-dashboard", adminOnly: false, employeeOnly: true },
-  { icon: Users, label: "Leads", path: "/leads", adminOnly: false, employeeOnly: false },
-  { icon: FolderKanban, label: "Projects", path: "/projects", adminOnly: false, employeeOnly: false },
-  { icon: ClipboardList, label: "Tasks", path: "/tasks", adminOnly: false, employeeOnly: false },
-  { icon: Calendar, label: "Site Visits", path: "/site-visits", adminOnly: false, employeeOnly: false },
-  { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: false, employeeOnly: false },
-  { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: false, employeeOnly: false },
-  { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: false, employeeOnly: false },
-  { icon: Settings, label: "Settings", path: "/settings", adminOnly: false, employeeOnly: false },
-  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true, employeeOnly: false },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: true },
+  { icon: LayoutDashboard, label: "My Dashboard", path: "/employee-dashboard", employeeOnly: true },
+  { icon: Users, label: "Leads", path: "/leads", adminOnly: true },
+  { icon: FolderKanban, label: "Projects", path: "/projects" },
+  { icon: ClipboardList, label: "Tasks", path: "/tasks" },
+  { icon: Calendar, label: "Site Visits", path: "/site-visits" },
+  { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: true },
+  { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: true },
+  { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: true },
+  { icon: Settings, label: "Settings", path: "/settings", adminOnly: true },
+  { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
 ];
 
 export function Sidebar() {
