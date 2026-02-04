@@ -14,7 +14,7 @@ import {
   MessageSquare, User, Camera, Loader2, Upload, X, CheckCircle2, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast.ts";
 import { useAuth } from "@/hooks/useAuth";
 
 export function SiteVisitForm({ 

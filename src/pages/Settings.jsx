@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { User, Bell, Shield, Building, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast.ts";
 
 const Settings = () => {
   const { user, profile, refreshProfile } = useAuth();
