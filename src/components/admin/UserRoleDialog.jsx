@@ -10,13 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useAssignRole, useRemoveRole, type UserWithRoles } from "@/hooks/useUsers";
+import { useAssignRole, useRemoveRole } from "@/hooks/useUsers";
 import { Loader2, Shield, User, Briefcase, Wrench, Package } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-
-const ALL_ROLES: { role: AppRole; label: string; description: string; icon: React.ReactNode }[] = [
+const ALL_ROLES = [
   { role: "admin", label: "Admin", description: "Full system access", icon: <Shield className="h-4 w-4" /> },
   { role: "accounts", label: "Accounts", description: "Financial management", icon: <Briefcase className="h-4 w-4" /> },
   { role: "hr", label: "HR", description: "Human resources", icon: <User className="h-4 w-4" /> },
@@ -28,14 +25,8 @@ const ALL_ROLES: { role: AppRole; label: string; description: string; icon: Reac
   { role: "storekeeper", label: "Storekeeper", description: "Manage inventory", icon: <Package className="h-4 w-4" /> },
 ];
 
-interface UserRoleDialogProps {
-  user: UserWithRoles | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps) {
-  const [pendingChanges, setPendingChanges] = useState<Map<AppRole, boolean>>(new Map());
+export function UserRoleDialog({ user, open, onOpenChange }) {
+  const [pendingChanges, setPendingChanges] = useState(new Map());
   const assignRole = useAssignRole();
   const removeRole = useRemoveRole();
 
@@ -44,7 +35,7 @@ export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps
   const currentRoles = new Set(user.roles);
   const isLoading = assignRole.isPending || removeRole.isPending;
 
-  const handleRoleToggle = (role: AppRole, checked: boolean) => {
+  const handleRoleToggle = (role, checked) => {
     setPendingChanges((prev) => {
       const newMap = new Map(prev);
       const hasRole = currentRoles.has(role);
@@ -71,9 +62,9 @@ export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps
     onOpenChange(false);
   };
 
-  const getRoleCheckedState = (role: AppRole): boolean => {
+  const getRoleCheckedState = (role) => {
     if (pendingChanges.has(role)) {
-      return pendingChanges.get(role)!;
+      return pendingChanges.get(role);
     }
     return currentRoles.has(role);
   };
@@ -116,7 +107,7 @@ export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps
                 <Checkbox
                   id={role}
                   checked={getRoleCheckedState(role)}
-                  onCheckedChange={(checked) => handleRoleToggle(role, checked as boolean)}
+                  onCheckedChange={(checked) => handleRoleToggle(role, checked)}
                   disabled={isLoading}
                 />
                 <div className="flex-1 space-y-1">

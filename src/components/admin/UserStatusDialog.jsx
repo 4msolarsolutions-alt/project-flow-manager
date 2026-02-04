@@ -8,16 +8,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useUpdateProfile, type UserWithRoles } from "@/hooks/useUsers";
+import { useUpdateProfile } from "@/hooks/useUsers";
 import { Loader2 } from "lucide-react";
 
-interface UserStatusDialogProps {
-  user: UserWithRoles | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function UserStatusDialog({ user, open, onOpenChange }: UserStatusDialogProps) {
+export function UserStatusDialog({ user, open, onOpenChange }) {
   const updateProfile = useUpdateProfile();
 
   if (!user) return null;

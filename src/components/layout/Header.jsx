@@ -10,11 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface HeaderProps {
-  title: string;
-}
-
-export function Header({ title }: HeaderProps) {
+export function Header({ title }) {
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6">
       <h1 className="text-xl font-semibold text-foreground">{title}</h1>

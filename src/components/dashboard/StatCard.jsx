@@ -1,14 +1,4 @@
-import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  change?: string;
-  changeType?: "positive" | "negative" | "neutral";
-  icon: LucideIcon;
-  iconBg?: string;
-}
 
 export function StatCard({
   title,
@@ -17,7 +7,7 @@ export function StatCard({
   changeType = "neutral",
   icon: Icon,
   iconBg = "bg-primary/10",
-}: StatCardProps) {
+}) {
   return (
     <div className="stat-card animate-fade-in">
       <div className="flex items-start justify-between">

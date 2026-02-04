@@ -36,7 +36,7 @@ const tasks = [
   },
 ];
 
-const getPriorityIcon = (priority: string) => {
+const getPriorityIcon = (priority) => {
   switch (priority) {
     case "high":
       return <AlertCircle className="h-4 w-4 text-destructive" />;

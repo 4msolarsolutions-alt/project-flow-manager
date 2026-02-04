@@ -11,63 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { 
   MapPin, Navigation, Building2, Ruler, Cable, Zap, 
-  MessageSquare, User, Camera, Loader2, Upload, X, CheckCircle2
+  MessageSquare, User, Camera, Loader2, Upload, X, CheckCircle2, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-
-interface SiteVisitFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  leadId: string;
-  leadName: string;
-  leadAddress: string;
-  onComplete: () => void;
-}
-
-interface FormData {
-  // Basic Details
-  latitude: string;
-  longitude: string;
-  eb_service_no: string;
-  
-  // Building Details
-  building_type: "rcc_roof" | "sheet_roof" | null;
-  floors: number;
-  panel_loading: "lift_available" | "staircase_carry" | "rope_handling" | null;
-  
-  // Roof Details
-  roof_length: number;
-  roof_width: number;
-  
-  // Electrical Layout
-  inverter_location: string;
-  dc_length: number;
-  ac_length: number;
-  earth_length: number;
-  earth_location: string;
-  la_point: boolean;
-  la_location: string;
-  breaker_location: string;
-  
-  // Structure Details
-  structure_material: "ms" | "aluminium" | "gi" | null;
-  structure_height: number;
-  
-  // Feedback
-  customer_feedback: string;
-  supervisor_name: string;
-  
-  // Customer Approvals
-  customer_approval_panel: boolean;
-  customer_approval_inverter: boolean;
-  customer_approval_cable: boolean;
-  customer_approval_breaker: boolean;
-  
-  // Recommended capacity
-  recommended_capacity: number;
-}
 
 export function SiteVisitForm({ 
   isOpen, 
@@ -76,18 +24,18 @@ export function SiteVisitForm({
   leadName, 
   leadAddress,
   onComplete 
-}: SiteVisitFormProps) {
+}) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCapturingGPS, setIsCapturingGPS] = useState(false);
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photos, setPhotos] = useState([]);
+  const [photoUrls, setPhotoUrls] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
   
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     latitude: "",
     longitude: "",
     eb_service_no: "",
@@ -151,7 +99,7 @@ export function SiteVisitForm({
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length + photos.length > 10) {
       toast({
@@ -167,14 +115,14 @@ export function SiteVisitForm({
     setPhotoUrls([...photoUrls, ...newUrls]);
   };
 
-  const removePhoto = (index: number) => {
+  const removePhoto = (index) => {
     URL.revokeObjectURL(photoUrls[index]);
     setPhotos(photos.filter((_, i) => i !== index));
     setPhotoUrls(photoUrls.filter((_, i) => i !== index));
   };
 
-  const uploadPhotos = async (): Promise<string[]> => {
-    const uploadedUrls: string[] = [];
+  const uploadPhotos = async () => {
+    const uploadedUrls = [];
     
     for (const photo of photos) {
       const fileExt = photo.name.split('.').pop();
@@ -200,7 +148,6 @@ export function SiteVisitForm({
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (!formData.latitude || !formData.longitude) {
       toast({
         title: "GPS Required",
@@ -240,13 +187,9 @@ export function SiteVisitForm({
     setIsSubmitting(true);
     
     try {
-      // Upload photos
       const uploadedPhotoUrls = await uploadPhotos();
-      
-      // Calculate roof area
       const roofArea = calculateRoofArea();
       
-      // Create site visit record
       const { error } = await supabase
         .from('site_visits')
         .insert({
@@ -285,7 +228,6 @@ export function SiteVisitForm({
       
       if (error) throw error;
       
-      // Update lead status
       await supabase
         .from('leads')
         .update({ status: 'site_visit_completed' })
@@ -298,7 +240,7 @@ export function SiteVisitForm({
       
       onComplete();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to submit site visit.",
@@ -472,7 +414,7 @@ export function SiteVisitForm({
               <CardContent>
                 <RadioGroup
                   value={formData.building_type || ""}
-                  onValueChange={(value) => setFormData({ ...formData, building_type: value as "rcc_roof" | "sheet_roof" })}
+                  onValueChange={(value) => setFormData({ ...formData, building_type: value })}
                   className="grid grid-cols-2 gap-4"
                 >
                   <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
@@ -524,7 +466,7 @@ export function SiteVisitForm({
               <CardContent>
                 <RadioGroup
                   value={formData.panel_loading || ""}
-                  onValueChange={(value) => setFormData({ ...formData, panel_loading: value as "lift_available" | "staircase_carry" | "rope_handling" })}
+                  onValueChange={(value) => setFormData({ ...formData, panel_loading: value })}
                   className="space-y-3"
                 >
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
@@ -664,7 +606,7 @@ export function SiteVisitForm({
                   <Checkbox
                     id="la_point"
                     checked={formData.la_point}
-                    onCheckedChange={(checked) => setFormData({ ...formData, la_point: checked as boolean })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, la_point: checked })}
                   />
                   <Label htmlFor="la_point">Lightning Arrester (LA) Point Required</Label>
                 </div>
@@ -710,7 +652,7 @@ export function SiteVisitForm({
               <CardContent>
                 <RadioGroup
                   value={formData.structure_material || ""}
-                  onValueChange={(value) => setFormData({ ...formData, structure_material: value as "ms" | "aluminium" | "gi" })}
+                  onValueChange={(value) => setFormData({ ...formData, structure_material: value })}
                   className="grid grid-cols-3 gap-4"
                 >
                   <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50">
@@ -811,7 +753,7 @@ export function SiteVisitForm({
                     <Checkbox
                       id="approval_panel"
                       checked={formData.customer_approval_panel}
-                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_panel: checked as boolean })}
+                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_panel: checked })}
                     />
                     <Label htmlFor="approval_panel">Panel Location - OK</Label>
                   </div>
@@ -819,7 +761,7 @@ export function SiteVisitForm({
                     <Checkbox
                       id="approval_inverter"
                       checked={formData.customer_approval_inverter}
-                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_inverter: checked as boolean })}
+                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_inverter: checked })}
                     />
                     <Label htmlFor="approval_inverter">Inverter Location - OK</Label>
                   </div>
@@ -827,7 +769,7 @@ export function SiteVisitForm({
                     <Checkbox
                       id="approval_cable"
                       checked={formData.customer_approval_cable}
-                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_cable: checked as boolean })}
+                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_cable: checked })}
                     />
                     <Label htmlFor="approval_cable">Cable Route - OK</Label>
                   </div>
@@ -835,7 +777,7 @@ export function SiteVisitForm({
                     <Checkbox
                       id="approval_breaker"
                       checked={formData.customer_approval_breaker}
-                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_breaker: checked as boolean })}
+                      onCheckedChange={(checked) => setFormData({ ...formData, customer_approval_breaker: checked })}
                     />
                     <Label htmlFor="approval_breaker">Breaker Location - OK</Label>
                   </div>
@@ -899,35 +841,39 @@ export function SiteVisitForm({
           </div>
         )}
 
-        <DialogFooter className="flex justify-between mt-6">
-          <div>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
             {currentStep > 1 && (
-              <Button variant="outline" onClick={() => setCurrentStep(currentStep - 1)}>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => setCurrentStep(currentStep - 1)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             {currentStep < 5 ? (
-              <Button onClick={() => setCurrentStep(currentStep + 1)}>
+              <Button 
+                type="button"
+                onClick={() => setCurrentStep(currentStep + 1)}
+              >
                 Next
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Complete Visit
-                  </>
-                )}
+              <Button 
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Submit Site Visit
               </Button>
             )}
           </div>

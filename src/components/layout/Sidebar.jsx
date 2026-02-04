@@ -18,9 +18,6 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 // Navigation items with role-based visibility
-// adminOnly: true = only admins see it
-// employeeOnly: true = only employees see it  
-// both false = everyone sees it (but we filter further below for employees)
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: true },
   { icon: LayoutDashboard, label: "My Dashboard", path: "/employee-dashboard", employeeOnly: true },
@@ -41,11 +38,8 @@ export function Sidebar() {
   const { isAdmin } = useAuth();
 
   const visibleNavItems = navItems.filter((item) => {
-    // Admin-only items: show only to admins
     if (item.adminOnly) return isAdmin();
-    // Employee-only items: show only to non-admins
     if (item.employeeOnly) return !isAdmin();
-    // Regular items: show to everyone
     return true;
   });
 
