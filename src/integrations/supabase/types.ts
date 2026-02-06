@@ -380,12 +380,76 @@ export type Database = {
           },
         ]
       }
+      payroll: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          base_salary: number | null
+          created_at: string
+          deductions: number
+          expense_reimbursement: number
+          generated_by: string | null
+          hourly_rate: number
+          id: string
+          month: number
+          notes: string | null
+          paid_at: string | null
+          status: string
+          total_hours: number
+          total_payable: number | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_salary?: number | null
+          created_at?: string
+          deductions?: number
+          expense_reimbursement?: number
+          generated_by?: string | null
+          hourly_rate?: number
+          id?: string
+          month: number
+          notes?: string | null
+          paid_at?: string | null
+          status?: string
+          total_hours?: number
+          total_payable?: number | null
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          base_salary?: number | null
+          created_at?: string
+          deductions?: number
+          expense_reimbursement?: number
+          generated_by?: string | null
+          hourly_rate?: number
+          id?: string
+          month?: number
+          notes?: string | null
+          paid_at?: string | null
+          status?: string
+          total_hours?: number
+          total_payable?: number | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
           created_at: string | null
           email: string | null
           first_name: string | null
+          hourly_rate: number | null
           id: string
           is_active: boolean | null
           last_name: string | null
@@ -398,6 +462,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           first_name?: string | null
+          hourly_rate?: number | null
           id: string
           is_active?: boolean | null
           last_name?: string | null
@@ -410,6 +475,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           first_name?: string | null
+          hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
           last_name?: string | null
