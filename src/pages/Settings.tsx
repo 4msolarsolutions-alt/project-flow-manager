@@ -9,6 +9,7 @@ import { User, Bell, Shield, Building, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { DataExport } from "@/components/dashboard/DataExport";
 
 const Settings = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -234,6 +235,11 @@ const Settings = () => {
               <Switch />
             </div>
           </div>
+        </div>
+
+        {/* Data Export Section */}
+        <div className="mt-6">
+          <DataExport />
         </div>
       </div>
     </AppLayout>
