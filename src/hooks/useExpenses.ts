@@ -4,8 +4,15 @@ import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
 type Expense = Database['public']['Tables']['expenses']['Row'];
-type ExpenseInsert = Database['public']['Tables']['expenses']['Insert'];
-type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'];
+type ExpenseInsert = Database['public']['Tables']['expenses']['Insert'] & {
+  bill_image_url?: string;
+  expense_scope?: 'project' | 'company';
+};
+type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'] & {
+  verified_amount?: number;
+  verification_status?: 'pending' | 'verified' | 'rejected';
+  rejection_reason?: string;
+};
 
 export function useExpenses(projectId?: string) {
   const queryClient = useQueryClient();
@@ -30,7 +37,14 @@ export function useExpenses(projectId?: string) {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as (Expense & { 
+        projects: { project_name: string } | null;
+        bill_image_url?: string;
+        verified_amount?: number;
+        verification_status?: string;
+        rejection_reason?: string;
+        expense_scope?: string;
+      })[];
     },
   });
 

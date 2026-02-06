@@ -15,6 +15,7 @@ import Tasks from "./pages/Tasks";
 import SiteVisits from "./pages/SiteVisits";
 import TimeLogs from "./pages/TimeLogs";
 import Payroll from "./pages/Payroll";
+import Expenses from "./pages/Expenses";
 import Quotations from "./pages/Quotations";
 import QuotationPreview from "./pages/QuotationPreview";
 import Payments from "./pages/Payments";
@@ -143,6 +144,7 @@ const AppRoutes = () => (
     <Route path="/tasks" element={<StaffRoute><Tasks /></StaffRoute>} />
     <Route path="/site-visits" element={<StaffRoute><SiteVisits /></StaffRoute>} />
     <Route path="/time-logs" element={<StaffRoute><TimeLogs /></StaffRoute>} />
+    <Route path="/expenses" element={<StaffRoute><Expenses /></StaffRoute>} />
     <Route path="/payroll" element={<StaffRoute><Payroll /></StaffRoute>} />
     <Route path="/quotations" element={<StaffRoute><Quotations /></StaffRoute>} />
     <Route path="/quotations/:id" element={<StaffRoute><QuotationPreview /></StaffRoute>} />

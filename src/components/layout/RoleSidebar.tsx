@@ -33,12 +33,11 @@ const adminNavItems = [
   { icon: Calendar, label: "Site Visits", path: "/site-visits" },
   { icon: ClipboardList, label: "Tasks", path: "/tasks" },
   { icon: Clock, label: "Time Logs", path: "/time-logs" },
-  { icon: DollarSign, label: "Expenses", path: "/payroll" },
+  { icon: DollarSign, label: "Expenses", path: "/expenses" },
   { icon: Wallet, label: "Payments", path: "/payments" },
+  { icon: FileBarChart, label: "Payroll", path: "/payroll" },
   { icon: FileText, label: "Quotations", path: "/quotations" },
   { icon: FileCheck, label: "Documents", path: "/documents" },
-  { icon: UserCheck, label: "Customers", path: "/admin" },
-  { icon: BarChart3, label: "Reports", path: "/admin" },
   { icon: Settings, label: "Settings", path: "/settings" },
   { icon: Shield, label: "Admin", path: "/admin" },
 ];
@@ -51,7 +50,7 @@ const pmNavItems = [
   { icon: ClipboardList, label: "Task Allocation", path: "/tasks" },
   { icon: Package, label: "Material Requests", path: "/projects" },
   { icon: FileBarChart, label: "Daily Reports", path: "/projects" },
-  { icon: DollarSign, label: "Expenses", path: "/payroll" },
+  { icon: DollarSign, label: "Expenses", path: "/expenses" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
@@ -61,7 +60,7 @@ const employeeNavItems = [
   { icon: FolderKanban, label: "My Projects", path: "/projects" },
   { icon: ClipboardList, label: "My Tasks", path: "/tasks" },
   { icon: Clock, label: "Time In / Out", path: "/time-logs" },
-  { icon: DollarSign, label: "My Expenses", path: "/payroll" },
+  { icon: DollarSign, label: "My Expenses", path: "/expenses" },
   { icon: Wallet, label: "My Payroll", path: "/payroll" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

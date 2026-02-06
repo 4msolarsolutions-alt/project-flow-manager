@@ -7,15 +7,15 @@ const employeeNavItems = [
   { icon: Home, label: "Home", path: "/employee-dashboard" },
   { icon: ClipboardList, label: "Tasks", path: "/tasks" },
   { icon: Clock, label: "Time", path: "/time-logs" },
-  { icon: Receipt, label: "Expenses", path: "/payroll" },
+  { icon: Receipt, label: "Expenses", path: "/expenses" },
   { icon: User, label: "Profile", path: "/settings" },
 ];
 
 const adminNavItems = [
   { icon: Home, label: "Home", path: "/" },
   { icon: ClipboardList, label: "Tasks", path: "/tasks" },
-  { icon: Clock, label: "Time", path: "/time-logs" },
-  { icon: Receipt, label: "Payroll", path: "/payroll" },
+  { icon: Receipt, label: "Expenses", path: "/expenses" },
+  { icon: Clock, label: "Payroll", path: "/payroll" },
   { icon: User, label: "Profile", path: "/settings" },
 ];
 
