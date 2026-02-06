@@ -10,20 +10,18 @@ import {
   DollarSign,
   FileCheck,
   Settings,
-  Sun,
   ChevronLeft,
   ChevronRight,
   Shield,
   Clock,
   Wallet,
   Package,
-  BarChart3,
   Headphones,
   FileBarChart,
-  UserCheck,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import solarLogo from "@/assets/4m-solar-logo.png";
 
 // Admin sidebar items
 const adminNavItems = [
@@ -118,13 +116,15 @@ export function RoleSidebar({ isOpen, onClose }: RoleSidebarProps) {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary shrink-0">
-              <Sun className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img 
+              src={solarLogo} 
+              alt="4M Solar Solutions" 
+              className="h-10 w-10 object-contain shrink-0"
+            />
             {!collapsed && (
               <div className="flex flex-col">
                 <span className="font-semibold text-sidebar-foreground">4M Solar</span>
-                <span className="text-xs text-sidebar-foreground/60">Management</span>
+                <span className="text-xs text-sidebar-foreground/60">Solutions</span>
               </div>
             )}
           </div>
