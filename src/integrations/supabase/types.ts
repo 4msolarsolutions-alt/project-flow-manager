@@ -163,50 +163,65 @@ export type Database = {
         Row: {
           amount: number
           approved_by: string | null
+          bill_image_url: string | null
           created_at: string | null
           days: number | null
           description: string | null
           expense_date: string | null
+          expense_scope: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
           id: string
           persons: number | null
           project_id: string | null
           rate_per_day: number | null
+          rejection_reason: string | null
           status: string | null
           submitted_by: string | null
           updated_at: string | null
+          verification_status: string | null
+          verified_amount: number | null
         }
         Insert: {
           amount: number
           approved_by?: string | null
+          bill_image_url?: string | null
           created_at?: string | null
           days?: number | null
           description?: string | null
           expense_date?: string | null
+          expense_scope?: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
           id?: string
           persons?: number | null
           project_id?: string | null
           rate_per_day?: number | null
+          rejection_reason?: string | null
           status?: string | null
           submitted_by?: string | null
           updated_at?: string | null
+          verification_status?: string | null
+          verified_amount?: number | null
         }
         Update: {
           amount?: number
           approved_by?: string | null
+          bill_image_url?: string | null
           created_at?: string | null
           days?: number | null
           description?: string | null
           expense_date?: string | null
+          expense_scope?: string | null
           expense_type?: Database["public"]["Enums"]["expense_type"]
           id?: string
           persons?: number | null
           project_id?: string | null
           rate_per_day?: number | null
+          rejection_reason?: string | null
           status?: string | null
           submitted_by?: string | null
           updated_at?: string | null
+          verification_status?: string | null
+          verified_amount?: number | null
         }
         Relationships: [
           {
