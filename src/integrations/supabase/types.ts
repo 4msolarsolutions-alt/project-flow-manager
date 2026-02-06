@@ -117,6 +117,7 @@ export type Database = {
           notes: string | null
           project_id: string | null
           uploaded_by: string | null
+          visible_to_customer: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -129,6 +130,7 @@ export type Database = {
           notes?: string | null
           project_id?: string | null
           uploaded_by?: string | null
+          visible_to_customer?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -141,6 +143,7 @@ export type Database = {
           notes?: string | null
           project_id?: string | null
           uploaded_by?: string | null
+          visible_to_customer?: boolean | null
         }
         Relationships: [
           {
@@ -344,6 +347,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          project_id: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          project_id?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          project_id?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -569,6 +616,53 @@ export type Database = {
           },
           {
             foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_stages: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          is_completed: boolean | null
+          notes: string | null
+          project_id: string
+          stage_key: string
+          stage_name: string
+          stage_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          project_id: string
+          stage_key: string
+          stage_name: string
+          stage_order: number
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          notes?: string | null
+          project_id?: string
+          stage_key?: string
+          stage_name?: string
+          stage_order?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stages_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -840,6 +934,59 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          issue_type: string
+          message: string
+          priority: string | null
+          project_id: string | null
+          resolved_at: string | null
+          status: string | null
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          issue_type: string
+          message: string
+          priority?: string | null
+          project_id?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          issue_type?: string
+          message?: string
+          priority?: string | null
+          project_id?: string | null
+          resolved_at?: string | null
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_by: string | null
@@ -1014,6 +1161,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      warranties: {
+        Row: {
+          brand_name: string | null
+          component_type: string
+          created_at: string | null
+          end_date: string | null
+          id: string
+          model_name: string | null
+          notes: string | null
+          performance_warranty_years: number | null
+          product_warranty_years: number
+          project_id: string
+          serial_number: string | null
+          start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          component_type: string
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          model_name?: string | null
+          notes?: string | null
+          performance_warranty_years?: number | null
+          product_warranty_years?: number
+          project_id: string
+          serial_number?: string | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          component_type?: string
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          model_name?: string | null
+          notes?: string | null
+          performance_warranty_years?: number | null
+          product_warranty_years?: number
+          project_id?: string
+          serial_number?: string | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
