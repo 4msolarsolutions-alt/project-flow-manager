@@ -30,7 +30,7 @@ export default function TimeLogs() {
     try {
       const location = await getLocation();
       await clockIn.mutateAsync({
-        project_id: selectedProject || undefined,
+        project_id: selectedProject && selectedProject !== "none" ? selectedProject : undefined,
         latitude: location.latitude,
         longitude: location.longitude,
         notes: notes || undefined,
@@ -116,7 +116,7 @@ export default function TimeLogs() {
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific project</SelectItem>
+                      <SelectItem value="none">No specific project</SelectItem>
                       {projects?.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.project_name}
