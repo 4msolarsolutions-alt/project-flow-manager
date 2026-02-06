@@ -174,7 +174,7 @@ export function SiteVisitForm({
   };
 
   const uploadPhotos = async (): Promise<string[]> => {
-    const uploadedUrls: string[] = [];
+    const uploadedPaths: string[] = [];
     
     for (const photo of photos) {
       const fileExt = photo.name.split('.').pop();
@@ -185,14 +185,13 @@ export function SiteVisitForm({
         .upload(fileName, photo);
       
       if (!error) {
-        const { data: { publicUrl } } = supabase.storage
-          .from('site-visits')
-          .getPublicUrl(fileName);
-        uploadedUrls.push(publicUrl);
+        // Store just the file path, not the public URL
+        // Photos will be accessed via signed URLs for security
+        uploadedPaths.push(fileName);
       }
     }
     
-    return uploadedUrls;
+    return uploadedPaths;
   };
 
   const calculateRoofArea = () => {
