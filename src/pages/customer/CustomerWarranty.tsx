@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useCustomerProjects } from "@/hooks/useCustomerProjects";
-import { format, addYears } from "date-fns";
+import { useWarranties } from "@/hooks/useWarranties";
+import { format } from "date-fns";
 import { 
   Shield, 
   Loader2, 
@@ -13,60 +14,77 @@ import {
   Cpu,
   Download,
   Phone,
-  Calendar
+  Calendar,
+  AlertTriangle,
+  Wrench,
+  XCircle
 } from "lucide-react";
 
 export default function CustomerWarranty() {
-  const { projects, isLoading } = useCustomerProjects();
-
+  const { projects, isLoading: projectsLoading } = useCustomerProjects();
   const project = projects?.[0];
 
-  // Default warranty periods (years)
-  const warrantyDetails = [
-    {
-      component: "Solar Panels",
-      icon: Sun,
-      performanceYears: 25,
-      productYears: 12,
-      description: "Performance warranty guarantees minimum power output"
-    },
-    {
-      component: "Inverter",
-      icon: Cpu,
-      performanceYears: 0,
-      productYears: 5,
-      description: "Manufacturer warranty covers defects and malfunctions"
-    },
-    {
-      component: "Battery (if applicable)",
-      icon: Battery,
-      performanceYears: 0,
-      productYears: 10,
-      description: "Covers battery capacity and performance"
-    },
-    {
-      component: "Workmanship",
-      icon: Shield,
-      performanceYears: 0,
-      productYears: 5,
-      description: "Installation and workmanship quality guarantee"
+  const { warranties, isLoading: warrantiesLoading, activeWarranties, expiringWarranties } = useWarranties(project?.id);
+
+  const isLoading = projectsLoading || warrantiesLoading;
+
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return "-";
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, "dd MMM yyyy");
+  };
+
+  const getComponentIcon = (type: string) => {
+    switch (type) {
+      case 'panel':
+        return Sun;
+      case 'inverter':
+        return Cpu;
+      case 'battery':
+        return Battery;
+      case 'workmanship':
+        return Wrench;
+      default:
+        return Shield;
     }
-  ];
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "-";
-    return format(new Date(dateString), "dd MMM yyyy");
   };
 
-  const getWarrantyEndDate = (startDate: string | null, years: number) => {
-    if (!startDate || years === 0) return null;
-    return addYears(new Date(startDate), years);
+  const getComponentLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      panel: 'Solar Panels',
+      inverter: 'Inverter',
+      battery: 'Battery',
+      workmanship: 'Installation & Workmanship',
+    };
+    return labels[type] || type;
   };
 
-  const isWarrantyActive = (startDate: string | null, years: number) => {
-    if (!startDate || years === 0) return false;
-    const endDate = getWarrantyEndDate(startDate, years);
-    return endDate && endDate > new Date();
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Active
+          </Badge>
+        );
+      case 'expiring_soon':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Expiring Soon
+          </Badge>
+        );
+      case 'expired':
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Expired
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">Not Started</Badge>;
+    }
   };
 
   if (isLoading) {
@@ -79,27 +97,54 @@ export default function CustomerWarranty() {
     );
   }
 
+  if (!project) {
+    return (
+      <AppLayout title="Warranty">
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            <p className="text-lg font-medium">Your project is not yet activated</p>
+            <p className="text-sm mt-2">Please contact support for assistance.</p>
+          </CardContent>
+        </Card>
+      </AppLayout>
+    );
+  }
+
   const installationDate = project?.actual_end_date || project?.start_date;
 
   return (
     <AppLayout title="Warranty">
       <div className="space-y-6">
-        {/* Warranty Status Banner */}
-        <Card className="bg-success/10 border-success/30">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-success/20">
-                <Shield className="h-8 w-8 text-success" />
+        {/* Warranty Overview */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <Shield className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Warranties</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{activeWarranties}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-success">Warranty Active</h2>
-                <p className="text-success/80">
-                  Your solar system is covered under manufacturer and workmanship warranties
-                </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Expiring Within 30 Days</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{expiringWarranties}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Installation Info */}
         <Card>
@@ -127,66 +172,80 @@ export default function CustomerWarranty() {
           </CardContent>
         </Card>
 
-        {/* Warranty Cards */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {warrantyDetails.map((warranty) => {
-            const Icon = warranty.icon;
-            const productActive = isWarrantyActive(installationDate, warranty.productYears);
-            const performanceActive = isWarrantyActive(installationDate, warranty.performanceYears);
-            const productEndDate = getWarrantyEndDate(installationDate, warranty.productYears);
-            const performanceEndDate = getWarrantyEndDate(installationDate, warranty.performanceYears);
+        {/* Warranty Cards from Database */}
+        {warranties && warranties.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {warranties.map((warranty) => {
+              const Icon = getComponentIcon(warranty.component_type);
 
-            return (
-              <Card key={warranty.component}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
+              return (
+                <Card key={warranty.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">{getComponentLabel(warranty.component_type)}</CardTitle>
+                          {warranty.brand_name && (
+                            <CardDescription>
+                              {warranty.brand_name} {warranty.model_name && `- ${warranty.model_name}`}
+                            </CardDescription>
+                          )}
+                        </div>
                       </div>
-                      <CardTitle className="text-base">{warranty.component}</CardTitle>
+                      {getStatusBadge(warranty.productStatus)}
                     </div>
-                    {(productActive || performanceActive) && (
-                      <Badge className="bg-success/20 text-success">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Active
-                      </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {warranty.product_warranty_years > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Product Warranty</span>
+                        <span className="font-medium">
+                          {warranty.product_warranty_years} years 
+                          {warranty.productEndDate && (
+                            <span className="text-muted-foreground ml-1">
+                              (until {format(warranty.productEndDate, "MMM yyyy")})
+                            </span>
+                          )}
+                        </span>
+                      </div>
                     )}
-                  </div>
-                  <CardDescription className="mt-2">{warranty.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {warranty.productYears > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Product Warranty</span>
-                      <span className="font-medium">
-                        {warranty.productYears} years 
-                        {productEndDate && (
-                          <span className="text-muted-foreground ml-1">
-                            (until {format(productEndDate, "MMM yyyy")})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {warranty.performanceYears > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Performance Warranty</span>
-                      <span className="font-medium">
-                        {warranty.performanceYears} years
-                        {performanceEndDate && (
-                          <span className="text-muted-foreground ml-1">
-                            (until {format(performanceEndDate, "MMM yyyy")})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    {warranty.performance_warranty_years && warranty.performance_warranty_years > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Performance Warranty</span>
+                        <span className="font-medium">
+                          {warranty.performance_warranty_years} years
+                          {warranty.performanceEndDate && (
+                            <span className="text-muted-foreground ml-1">
+                              (until {format(warranty.performanceEndDate, "MMM yyyy")})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {warranty.daysUntilProductExpiry !== null && warranty.daysUntilProductExpiry > 0 && (
+                      <p className="text-xs text-primary">
+                        {warranty.daysUntilProductExpiry} days remaining on product warranty
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="font-semibold mb-1">No warranty information yet</h3>
+              <p className="text-sm text-muted-foreground">
+                Warranty details will be added once your installation is complete
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Support Card */}
         <Card className="bg-muted/50">
