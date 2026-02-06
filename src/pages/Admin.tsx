@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useUsers, type UserWithRoles } from "@/hooks/useUsers";
+import { useUsers, useConfirmEmail, type UserWithRoles } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { UserStatusDialog } from "@/components/admin/UserStatusDialog";
@@ -39,6 +39,7 @@ import {
   ShieldCheck,
   ShieldX,
   Mail,
+  MailCheck,
   Phone,
   Loader2,
   Users,
@@ -69,6 +70,7 @@ const loginTypeLabels: Record<string, string> = {
 const Admin = () => {
   const { isAdmin } = useAuth();
   const { data: users, isLoading, error } = useUsers();
+  const confirmEmailMutation = useConfirmEmail();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -333,6 +335,15 @@ const Admin = () => {
                           >
                             <Key className="mr-2 h-4 w-4" />
                             Reset Password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              confirmEmailMutation.mutate({ userId: user.id });
+                            }}
+                            disabled={confirmEmailMutation.isPending}
+                          >
+                            <MailCheck className="mr-2 h-4 w-4" />
+                            Confirm Email
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
