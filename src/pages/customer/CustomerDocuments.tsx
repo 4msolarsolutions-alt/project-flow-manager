@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useCustomerProjects } from "@/hooks/useCustomerProjects";
+import { useCustomerDocuments, DOCUMENT_TYPE_LABELS } from "@/hooks/useCustomerDocuments";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { 
@@ -14,8 +15,10 @@ import {
   FileBarChart,
   Receipt,
   Shield,
-  FolderOpen
+  FolderOpen,
+  Eye
 } from "lucide-react";
+import { toast } from "sonner";
 
 const DOCUMENT_TYPE_INFO: Record<string, { label: string; icon: React.ElementType; description: string }> = {
   quotation: { label: "Quotation", icon: FileBarChart, description: "Project cost estimate and BOM" },
@@ -31,26 +34,9 @@ const DOCUMENT_TYPE_INFO: Record<string, { label: string; icon: React.ElementTyp
 
 export default function CustomerDocuments() {
   const { projects, isLoading: projectsLoading } = useCustomerProjects();
-  const projectIds = projects?.map(p => p.id) || [];
-  const leadIds = projects?.map(p => p.lead_id).filter(Boolean) || [];
-
-  const { data: documents, isLoading: docsLoading } = useQuery({
-    queryKey: ['customer-documents', projectIds, leadIds],
-    queryFn: async () => {
-      if (projectIds.length === 0) return [];
-      
-      // Get documents for both project and lead
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .or(`project_id.in.(${projectIds.join(',')}),lead_id.in.(${leadIds.join(',')})`)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: projectIds.length > 0,
-  });
+  const project = projects?.[0];
+  
+  const { documents, documentsByType, isLoading: docsLoading, documentsCount } = useCustomerDocuments(project?.id);
 
   const isLoading = projectsLoading || docsLoading;
 
@@ -68,6 +54,26 @@ export default function CustomerDocuments() {
 
   const getDocumentInfo = (type: string) => {
     return DOCUMENT_TYPE_INFO[type] || DOCUMENT_TYPE_INFO.other;
+  };
+
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      // Try to get signed URL for private bucket
+      const { data, error } = await supabase.storage
+        .from('site-visits')
+        .createSignedUrl(fileUrl, 300);
+
+      if (error) {
+        // Try direct download if not in storage bucket
+        window.open(fileUrl, '_blank');
+        return;
+      }
+
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.error('Download error:', err);
+      window.open(fileUrl, '_blank');
+    }
   };
 
   // Available document types for customer (predefined list)
@@ -90,13 +96,18 @@ export default function CustomerDocuments() {
     );
   }
 
-  // Group documents by type
-  const documentsByType = documents?.reduce((acc, doc) => {
-    const type = doc.document_type;
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(doc);
-    return acc;
-  }, {} as Record<string, typeof documents>);
+  if (!project) {
+    return (
+      <AppLayout title="Documents">
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            <p className="text-lg font-medium">Your project is not yet activated</p>
+            <p className="text-sm mt-2">Please contact support for assistance.</p>
+          </CardContent>
+        </Card>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Documents">
@@ -111,7 +122,7 @@ export default function CustomerDocuments() {
               <div>
                 <h2 className="text-xl font-bold">Project Documents</h2>
                 <p className="text-primary-foreground/80">
-                  Access and download your project-related documents
+                  {documentsCount} document(s) available for download
                 </p>
               </div>
             </div>
@@ -161,7 +172,7 @@ export default function CustomerDocuments() {
                           <Button 
                             size="sm" 
                             variant="ghost"
-                            onClick={() => window.open(doc.file_url, '_blank')}
+                            onClick={() => handleDownload(doc.file_url, doc.file_name)}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -216,7 +227,7 @@ export default function CustomerDocuments() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => window.open(doc.file_url, '_blank')}
+                        onClick={() => handleDownload(doc.file_url, doc.file_name)}
                         className="gap-2"
                       >
                         <Download className="h-4 w-4" />
@@ -237,7 +248,7 @@ export default function CustomerDocuments() {
               <FolderOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="font-semibold mb-1">No documents yet</h3>
               <p className="text-sm text-muted-foreground">
-                Project documents will appear here as they are uploaded
+                Project documents will appear here as they are uploaded by the team
               </p>
             </CardContent>
           </Card>

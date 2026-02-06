@@ -2,7 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useCustomerProjects, PROJECT_STATUS_FLOW, getStatusIndex } from "@/hooks/useCustomerProjects";
+import { useCustomerProjects } from "@/hooks/useCustomerProjects";
+import { useProjectStages, STAGE_ICONS } from "@/hooks/useProjectStages";
 import { format } from "date-fns";
 import { 
   MapPin, 
@@ -18,7 +19,15 @@ import {
 } from "lucide-react";
 
 export default function CustomerProject() {
-  const { projects, isLoading } = useCustomerProjects();
+  const { projects, isLoading: projectsLoading } = useCustomerProjects();
+  const project = projects?.[0];
+  
+  const { 
+    stages, 
+    isLoading: stagesLoading, 
+    progressPercent,
+    currentStage 
+  } = useProjectStages(project?.id);
 
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return "-";
@@ -30,7 +39,7 @@ export default function CustomerProject() {
     return format(new Date(dateString), "dd MMM yyyy");
   };
 
-  if (isLoading) {
+  if (projectsLoading || stagesLoading) {
     return (
       <AppLayout title="My Project">
         <div className="flex items-center justify-center h-64">
@@ -40,22 +49,18 @@ export default function CustomerProject() {
     );
   }
 
-  const project = projects?.[0];
-
   if (!project) {
     return (
       <AppLayout title="My Project">
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
-            No project found
+            <p className="text-lg font-medium">Your project is not yet activated</p>
+            <p className="text-sm mt-2">Please contact support for assistance.</p>
           </CardContent>
         </Card>
       </AppLayout>
     );
   }
-
-  const statusIndex = getStatusIndex(project.status);
-  const progress = ((statusIndex + 1) / PROJECT_STATUS_FLOW.length) * 100;
 
   return (
     <AppLayout title="My Project">
@@ -82,7 +87,7 @@ export default function CustomerProject() {
           <CardHeader>
             <CardTitle className="text-lg">Project Status</CardTitle>
             <CardDescription>
-              Current status: {PROJECT_STATUS_FLOW.find(s => s.key === project.status)?.label}
+              Current status: {currentStage?.stage_name || 'Project Created'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -90,21 +95,22 @@ export default function CustomerProject() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Overall Progress</span>
-                <span className="font-medium">{Math.round(progress)}%</span>
+                <span className="font-medium">{progressPercent}%</span>
               </div>
-              <Progress value={progress} className="h-3" />
+              <Progress value={progressPercent} className="h-3" />
             </div>
 
             {/* Status Timeline */}
             <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mt-6">
               <div className="flex md:grid md:grid-cols-5 gap-3 min-w-max md:min-w-0">
-                {PROJECT_STATUS_FLOW.map((status, index) => {
-                  const isCompleted = index <= statusIndex;
-                  const isCurrent = index === statusIndex;
+                {stages?.map((stage) => {
+                  const isCompleted = stage.is_completed;
+                  const isCurrent = currentStage?.id === stage.id;
+                  const icon = STAGE_ICONS[stage.stage_key] || '📌';
                   
                   return (
                     <div 
-                      key={status.key}
+                      key={stage.id}
                       className={`flex flex-col items-center p-3 rounded-lg text-center transition-colors min-w-[100px] ${
                         isCurrent 
                           ? 'bg-primary/10 border-2 border-primary' 
@@ -113,14 +119,14 @@ export default function CustomerProject() {
                             : 'bg-muted/30'
                       }`}
                     >
-                      <span className="text-2xl mb-2">{status.icon}</span>
+                      <span className="text-2xl mb-2">{icon}</span>
                       {isCompleted ? (
                         <CheckCircle2 className="h-5 w-5 text-primary mb-2" />
                       ) : (
                         <Circle className="h-5 w-5 text-muted-foreground mb-2" />
                       )}
                       <span className={`text-xs ${isCompleted ? 'font-medium' : 'text-muted-foreground'}`}>
-                        {status.label}
+                        {stage.stage_name}
                       </span>
                     </div>
                   );
