@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -97,7 +97,7 @@ export default function Payroll() {
   };
 
   return (
-    <Layout title="Payroll">
+    <AppLayout title="Payroll">
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4">
@@ -356,6 +356,6 @@ export default function Payroll() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </AppLayout>
   );
 }

@@ -203,4 +203,9 @@
   .shadow-card-hover {
     box-shadow: var(--shadow-lg);
   }
+
+  /* Mobile-first responsive utilities */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }

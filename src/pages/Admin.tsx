@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -84,7 +84,7 @@ const Admin = () => {
   // Check admin access
   if (!isAdmin()) {
     return (
-      <Layout title="Access Denied">
+      <AppLayout title="Access Denied">
         <div className="flex flex-col items-center justify-center py-20">
           <ShieldX className="h-16 w-16 text-destructive mb-4" />
           <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
@@ -92,7 +92,7 @@ const Admin = () => {
             You need admin privileges to access this page.
           </p>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
@@ -122,7 +122,7 @@ const Admin = () => {
   };
 
   return (
-    <Layout title="Admin Panel">
+    <AppLayout title="Admin Panel">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-4">
@@ -394,7 +394,7 @@ const Admin = () => {
       />
 
       <AddEmployeeDialog open={addEmployeeOpen} onOpenChange={setAddEmployeeOpen} />
-    </Layout>
+    </AppLayout>
   );
 };
 

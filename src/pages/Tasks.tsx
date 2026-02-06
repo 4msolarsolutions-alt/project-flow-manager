@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -171,7 +171,7 @@ const Tasks = () => {
   };
 
   return (
-    <Layout title="Tasks">
+    <AppLayout title="Tasks">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <Select value={projectFilter} onValueChange={setProjectFilter}>
@@ -411,7 +411,7 @@ const Tasks = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </AppLayout>
   );
 };
 

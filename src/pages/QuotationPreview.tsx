@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -226,24 +226,24 @@ const QuotationPreview = () => {
 
   if (isLoading) {
     return (
-      <Layout title="Quotation Details">
+      <AppLayout title="Quotation Details">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   if (!quotation) {
     return (
-      <Layout title="Quotation Details">
+      <AppLayout title="Quotation Details">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Quotation not found.</p>
           <Button variant="link" onClick={() => navigate("/quotations")}>
             Back to Quotations
           </Button>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
@@ -251,7 +251,7 @@ const QuotationPreview = () => {
   const bom = parseBom(quotation.bom);
 
   return (
-    <Layout title="Quotation Details">
+    <AppLayout title="Quotation Details">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -576,7 +576,7 @@ const QuotationPreview = () => {
           </Card>
         </div>
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

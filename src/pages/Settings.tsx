@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,16 +72,16 @@ const Settings = () => {
 
   if (!profile) {
     return (
-      <Layout title="Settings">
+      <AppLayout title="Settings">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   return (
-    <Layout title="Settings">
+    <AppLayout title="Settings">
       <div className="mx-auto max-w-3xl">
         {/* Profile Section */}
         <div className="rounded-xl bg-card border border-border p-6 animate-fade-in">
@@ -236,7 +236,7 @@ const Settings = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

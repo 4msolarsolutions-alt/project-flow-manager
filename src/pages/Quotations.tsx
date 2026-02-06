@@ -1,4 +1,4 @@
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -83,7 +83,7 @@ const Quotations = () => {
   };
 
   return (
-    <Layout title="Quotations">
+    <AppLayout title="Quotations">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <p className="text-muted-foreground">
@@ -206,7 +206,7 @@ const Quotations = () => {
           </div>
         )}
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

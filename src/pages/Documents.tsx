@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -203,7 +203,7 @@ const Documents = () => {
   };
 
   return (
-    <Layout title="Documents">
+    <AppLayout title="Documents">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -417,7 +417,7 @@ const Documents = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </AppLayout>
   );
 };
 
