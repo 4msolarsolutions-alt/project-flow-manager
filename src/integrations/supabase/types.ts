@@ -809,6 +809,65 @@ export type Database = {
           },
         ]
       }
+      time_logs: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          latitude_in: string | null
+          latitude_out: string | null
+          longitude_in: string | null
+          longitude_out: string | null
+          notes: string | null
+          project_id: string | null
+          time_in: string | null
+          time_out: string | null
+          total_hours: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          latitude_in?: string | null
+          latitude_out?: string | null
+          longitude_in?: string | null
+          longitude_out?: string | null
+          notes?: string | null
+          project_id?: string | null
+          time_in?: string | null
+          time_out?: string | null
+          total_hours?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          latitude_in?: string | null
+          latitude_out?: string | null
+          longitude_in?: string | null
+          longitude_out?: string | null
+          notes?: string | null
+          project_id?: string | null
+          time_in?: string | null
+          time_out?: string | null
+          total_hours?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           assigned_by: string | null

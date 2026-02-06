@@ -11,6 +11,7 @@ import Leads from "./pages/Leads";
 import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
 import SiteVisits from "./pages/SiteVisits";
+import TimeLogs from "./pages/TimeLogs";
 import Quotations from "./pages/Quotations";
 import QuotationPreview from "./pages/QuotationPreview";
 import Payments from "./pages/Payments";
@@ -69,6 +70,7 @@ const AppRoutes = () => (
     <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
     <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
     <Route path="/site-visits" element={<ProtectedRoute><SiteVisits /></ProtectedRoute>} />
+    <Route path="/time-logs" element={<ProtectedRoute><TimeLogs /></ProtectedRoute>} />
     <Route path="/quotations" element={<ProtectedRoute><Quotations /></ProtectedRoute>} />
     <Route path="/quotations/:id" element={<ProtectedRoute><QuotationPreview /></ProtectedRoute>} />
     <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
