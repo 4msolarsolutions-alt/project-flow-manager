@@ -96,11 +96,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update the user's password and ensure email is confirmed
-    const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
+    // Update the user's password and ensure email is confirmed.
+    // Some auth setups only apply email_confirm reliably when email is included.
+    const updatePayload: Record<string, unknown> = {
       password: newPassword,
-      email_confirm: true, // Auto-confirm so they can log in immediately
-    });
+      email_confirm: true,
+    };
+
+    if (targetUser.user.email) {
+      updatePayload.email = targetUser.user.email;
+    }
+
+    const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, updatePayload);
 
     if (updateErr) {
       console.error("Failed to update password", updateErr);
