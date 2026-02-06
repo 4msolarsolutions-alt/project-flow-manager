@@ -79,17 +79,18 @@ export function useTimeLogs() {
     queryFn: async () => {
       if (!user) return null;
       
-      // Find any session that hasn't been clocked out yet
+      // Find the most recent session that hasn't been clocked out yet
       const { data, error } = await supabase
         .from('time_logs')
         .select('*')
         .eq('user_id', user.id)
         .is('time_out', null)
         .order('time_in', { ascending: false })
-        .maybeSingle();
+        .limit(1);
       
       if (error) throw error;
-      return data as TimeLog | null;
+      // Return the first (most recent) active session or null
+      return (data && data.length > 0 ? data[0] : null) as TimeLog | null;
     },
     enabled: !!user,
     refetchInterval: 30000, // Refresh every 30 seconds
