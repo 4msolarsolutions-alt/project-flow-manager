@@ -166,7 +166,9 @@ const Tasks = () => {
   const [selectedSiteVisitTask, setSelectedSiteVisitTask] = useState<any>(null);
 
   const handleSiteVisitTaskClick = (task: any) => {
-    if (task.work_type === 'lead' && task.lead_id && task.leads) {
+    console.log('Site visit task clicked:', task);
+    // For lead-type tasks with a lead_id, open the site visit form
+    if (task.work_type === 'lead' && task.lead_id) {
       setSelectedSiteVisitTask(task);
       setIsSiteVisitFormOpen(true);
     }
