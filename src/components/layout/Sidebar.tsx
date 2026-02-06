@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,6 +25,7 @@ const navItems = [
   { icon: FolderKanban, label: "Projects", path: "/projects", adminOnly: false, employeeOnly: false },
   { icon: ClipboardList, label: "Tasks", path: "/tasks", adminOnly: false, employeeOnly: false },
   { icon: Calendar, label: "Site Visits", path: "/site-visits", adminOnly: false, employeeOnly: false },
+  { icon: Clock, label: "Time Logs", path: "/time-logs", adminOnly: false, employeeOnly: false },
   { icon: FileText, label: "Quotations", path: "/quotations", adminOnly: false, employeeOnly: false },
   { icon: DollarSign, label: "Payments", path: "/payments", adminOnly: false, employeeOnly: false },
   { icon: FileCheck, label: "Documents", path: "/documents", adminOnly: false, employeeOnly: false },
