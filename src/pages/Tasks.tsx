@@ -19,12 +19,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, AlertCircle, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Plus, AlertCircle, Clock, CheckCircle2, Loader2, MapPin } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
+import { SiteVisitForm } from "@/components/site-visits/SiteVisitForm";
 import type { Database } from "@/integrations/supabase/types";
 
 type TaskStatus = Database['public']['Enums']['task_status'];
@@ -49,18 +50,40 @@ const formatDate = (dateStr: string | null) => {
   });
 };
 
+// Check if a task is a site visit task
+const isSiteVisitTask = (task: any) => {
+  const title = task.title?.toLowerCase() || '';
+  return title.includes('site visit') || title.includes('site-visit') || title.includes('sitevisit');
+};
+
 interface TaskCardProps {
   task: any;
   completed?: boolean;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
+  onTaskClick?: (task: any) => void;
 }
 
-const TaskCard = ({ task, completed = false, onStatusChange }: TaskCardProps) => {
+const TaskCard = ({ task, completed = false, onStatusChange, onTaskClick }: TaskCardProps) => {
   const profile = task.profiles;
   const assigneeName = profile?.first_name || 'Unassigned';
+  const isSiteVisit = isSiteVisitTask(task);
+  
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on checkbox
+    if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
+    
+    if (isSiteVisit && onTaskClick && !completed) {
+      onTaskClick(task);
+    }
+  };
   
   return (
-    <div className="rounded-lg bg-card border border-border p-4 transition-all hover:shadow-sm">
+    <div 
+      className={`rounded-lg bg-card border border-border p-4 transition-all hover:shadow-sm ${
+        isSiteVisit && !completed ? 'cursor-pointer hover:border-primary/50' : ''
+      }`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start gap-3">
         <Checkbox 
           className="mt-1" 
@@ -74,9 +97,17 @@ const TaskCard = ({ task, completed = false, onStatusChange }: TaskCardProps) =>
           }}
         />
         <div className="flex-1">
-          <p className={`font-medium ${completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-            {task.title}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className={`font-medium ${completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+              {task.title}
+            </p>
+            {isSiteVisit && !completed && (
+              <span className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                <MapPin className="h-3 w-3" />
+                Tap to fill
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {task.work_type === 'lead' 
               ? task.leads?.customer_name || 'Lead task'
@@ -129,6 +160,26 @@ const Tasks = () => {
     priority: "medium",
     due_date: "",
   });
+
+  // Site visit form state
+  const [isSiteVisitFormOpen, setIsSiteVisitFormOpen] = useState(false);
+  const [selectedSiteVisitTask, setSelectedSiteVisitTask] = useState<any>(null);
+
+  const handleSiteVisitTaskClick = (task: any) => {
+    if (task.work_type === 'lead' && task.lead_id && task.leads) {
+      setSelectedSiteVisitTask(task);
+      setIsSiteVisitFormOpen(true);
+    }
+  };
+
+  const handleSiteVisitComplete = () => {
+    if (selectedSiteVisitTask) {
+      // Mark the task as completed after site visit form submission
+      updateTaskStatus.mutate({ id: selectedSiteVisitTask.id, status: 'completed' });
+    }
+    setIsSiteVisitFormOpen(false);
+    setSelectedSiteVisitTask(null);
+  };
 
   const filteredTasks = tasks?.filter((task) => {
     if (projectFilter === "all") return true;
@@ -227,6 +278,7 @@ const Tasks = () => {
                     key={task.id} 
                     task={task} 
                     onStatusChange={handleStatusChange}
+                    onTaskClick={handleSiteVisitTaskClick}
                   />
                 ))
               )}
@@ -250,6 +302,7 @@ const Tasks = () => {
                     key={task.id} 
                     task={task}
                     onStatusChange={handleStatusChange}
+                    onTaskClick={handleSiteVisitTaskClick}
                   />
                 ))
               )}
@@ -273,6 +326,7 @@ const Tasks = () => {
                     key={task.id} 
                     task={task}
                     onStatusChange={handleStatusChange}
+                    onTaskClick={handleSiteVisitTaskClick}
                   />
                 ))
               )}
@@ -465,6 +519,21 @@ const Tasks = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Site Visit Form Modal */}
+      {selectedSiteVisitTask && (
+        <SiteVisitForm
+          isOpen={isSiteVisitFormOpen}
+          onClose={() => {
+            setIsSiteVisitFormOpen(false);
+            setSelectedSiteVisitTask(null);
+          }}
+          leadId={selectedSiteVisitTask.lead_id}
+          leadName={selectedSiteVisitTask.leads?.customer_name || 'Unknown Lead'}
+          leadAddress={selectedSiteVisitTask.leads?.address || 'No address'}
+          onComplete={handleSiteVisitComplete}
+        />
+      )}
     </AppLayout>
   );
 };
