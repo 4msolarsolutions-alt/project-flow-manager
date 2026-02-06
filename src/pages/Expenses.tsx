@@ -127,8 +127,8 @@ export default function Expenses() {
         .getPublicUrl(fileName);
 
       // Create expense record with work_type logic
-      // Lead = Company expense, Project = Project expense
-      const expenseScope = workType === "lead" ? "company" : "project";
+      // Lead = Company expense, Project = Project expense, Company = Company expense
+      const expenseScope = workType === "project" ? "project" : "company";
       
       await createExpense.mutateAsync({
         expense_type: expenseType as "food" | "travel" | "material" | "other",
@@ -287,10 +287,15 @@ export default function Expenses() {
                         <SelectContent>
                           <SelectItem value="lead">Lead Site Visit</SelectItem>
                           <SelectItem value="project">Project Work</SelectItem>
+                          <SelectItem value="company">4M Solar Company Material</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {workType === "lead" ? "Company expense (pre-project)" : "Project expense"}
+                        {workType === "lead" 
+                          ? "Company expense (pre-project)" 
+                          : workType === "company"
+                            ? "Company material purchase"
+                            : "Project expense"}
                       </p>
                     </div>
 
@@ -480,7 +485,9 @@ export default function Expenses() {
                         <TableCell>
                           {expense.work_type === 'lead' 
                             ? <span className="text-muted-foreground">{expense.leads?.customer_name || 'Lead'}</span>
-                            : expense.projects?.project_name || <span className="text-muted-foreground">Company</span>}
+                            : expense.work_type === 'company'
+                              ? <span className="text-primary font-medium">4M Solar</span>
+                              : expense.projects?.project_name || <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {expense.description || '-'}
