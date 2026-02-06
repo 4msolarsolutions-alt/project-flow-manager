@@ -195,3 +195,30 @@ export function useCreateEmployee() {
     },
   });
 }
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+        body: { user_id: userId, new_password: newPassword },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password reset",
+        description: "The user's password has been reset successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error resetting password",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
