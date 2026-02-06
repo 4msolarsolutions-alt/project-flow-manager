@@ -24,7 +24,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Filter, MoreHorizontal, Phone, MapPin, Calendar, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Phone, MapPin, Calendar, Loader2, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLeads } from "@/hooks/useLeads";
 import { useSiteVisits } from "@/hooks/useSiteVisits";
 import { useProjects } from "@/hooks/useProjects";
@@ -62,7 +72,7 @@ const formatStatus = (status: string) => {
 };
 
 const Leads = () => {
-  const { leads, isLoading, createLead, updateLead } = useLeads();
+  const { leads, isLoading, createLead, updateLead, deleteLead } = useLeads();
   const { createSiteVisit } = useSiteVisits();
   const { createProject } = useProjects();
   const { user } = useAuth();
@@ -74,8 +84,25 @@ const Leads = () => {
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleDeleteLead = async () => {
+    if (!selectedLead) return;
+    try {
+      await deleteLead.mutateAsync(selectedLead.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedLead(null);
+    } catch (error) {
+      console.error("Error deleting lead:", error);
+    }
+  };
+
+  const openDeleteDialog = (lead: Lead) => {
+    setSelectedLead(lead);
+    setIsDeleteDialogOpen(true);
+  };
   
   const [convertData, setConvertData] = useState({
     project_name: "",
@@ -435,6 +462,13 @@ const Leads = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openConvertDialog(lead)}>
                             Convert to Project
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => openDeleteDialog(lead)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Lead
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -990,6 +1024,27 @@ const Leads = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the lead for "{selectedLead?.customer_name}"? This action cannot be undone and will permanently remove the lead and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLead}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };

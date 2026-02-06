@@ -25,7 +25,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Calendar, User, Zap, Loader2, Eye, Edit2, FileText, ClipboardList } from "lucide-react";
+import { Plus, MoreHorizontal, Calendar, User, Zap, Loader2, Eye, Edit2, FileText, ClipboardList, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useUsers } from "@/hooks/useUsers";
@@ -77,15 +87,32 @@ const formatStatus = (status: string | null) => {
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { projects, isLoading, createProject, updateProject } = useProjects();
+  const { projects, isLoading, createProject, updateProject, deleteProject } = useProjects();
   const { leads } = useLeads();
   const { data: users } = useUsers();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!selectedProject) return;
+    try {
+      await deleteProject.mutateAsync(selectedProject.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedProject(null);
+    } catch (error) {
+      console.error("Error deleting project:", error);
+    }
+  };
+
+  const openDeleteDialog = (project: any) => {
+    setSelectedProject(project);
+    setIsDeleteDialogOpen(true);
+  };
 
   const [formData, setFormData] = useState({
     project_name: "",
@@ -287,6 +314,13 @@ const Projects = () => {
                     >
                       <FileText className="h-4 w-4" />
                       Documents
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2 text-destructive focus:text-destructive"
+                      onClick={() => openDeleteDialog(project)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Project
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -755,6 +789,27 @@ const Projects = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedProject?.project_name}"? This action cannot be undone and will permanently remove the project and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
