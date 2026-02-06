@@ -73,19 +73,19 @@ export function useTimeLogs() {
     enabled: !!user,
   });
 
-  // Get today's active session (clocked in but not out)
+  // Get current active session (clocked in but not out) - regardless of date
   const { data: activeSession } = useQuery({
-    queryKey: ['time-logs', 'active'],
+    queryKey: ['time-logs', 'active', user?.id],
     queryFn: async () => {
       if (!user) return null;
       
-      const today = new Date().toISOString().split('T')[0];
+      // Find any session that hasn't been clocked out yet
       const { data, error } = await supabase
         .from('time_logs')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', today)
         .is('time_out', null)
+        .order('time_in', { ascending: false })
         .maybeSingle();
       
       if (error) throw error;
