@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useTimeLogs, useGeolocation } from "@/hooks/useTimeLogs";
 import { useProjects } from "@/hooks/useProjects";
+import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { Clock, MapPin, Play, Square, Loader2, AlertCircle } from "lucide-react";
@@ -15,10 +16,13 @@ import { Clock, MapPin, Play, Square, Loader2, AlertCircle } from "lucide-react"
 export default function TimeLogs() {
   const { timeLogs, isLoading, activeSession, clockIn, clockOut } = useTimeLogs();
   const { projects } = useProjects();
+  const { leads } = useLeads();
   const { getLocation } = useGeolocation();
   const { isAdmin } = useAuth();
   
+  const [workType, setWorkType] = useState<string>("project");
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedLead, setSelectedLead] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -30,13 +34,17 @@ export default function TimeLogs() {
     try {
       const location = await getLocation();
       await clockIn.mutateAsync({
-        project_id: selectedProject && selectedProject !== "none" ? selectedProject : undefined,
+        work_type: workType,
+        project_id: workType === "project" && selectedProject && selectedProject !== "none" ? selectedProject : undefined,
+        lead_id: workType === "lead" && selectedLead && selectedLead !== "none" ? selectedLead : undefined,
         latitude: location.latitude,
         longitude: location.longitude,
         notes: notes || undefined,
       });
       setNotes("");
       setSelectedProject("");
+      setSelectedLead("");
+      setWorkType("project");
     } catch (error) {
       setLocationError(error instanceof Error ? error.message : 'Failed to get location');
     } finally {
@@ -108,23 +116,67 @@ export default function TimeLogs() {
             )}
 
             {!activeSession && (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Project (Optional)</label>
-                  <Select value={selectedProject} onValueChange={setSelectedProject}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No specific project</SelectItem>
-                      {projects?.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.project_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Work Type *</label>
+                    <Select value={workType} onValueChange={(value) => {
+                      setWorkType(value);
+                      setSelectedProject("");
+                      setSelectedLead("");
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lead">Lead Site Visit</SelectItem>
+                        <SelectItem value="project">Project Work</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {workType === "lead" ? "Tracking only (not counted in payroll)" : "Hours counted in payroll"}
+                    </p>
+                  </div>
+
+                  {workType === "lead" && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Lead *</label>
+                      <Select value={selectedLead} onValueChange={setSelectedLead}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select lead" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No specific lead</SelectItem>
+                          {leads?.map((lead) => (
+                            <SelectItem key={lead.id} value={lead.id}>
+                              {lead.customer_name} - {lead.address}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {workType === "project" && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Project</label>
+                      <Select value={selectedProject} onValueChange={setSelectedProject}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No specific project</SelectItem>
+                          {projects?.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.project_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Notes (Optional)</label>
                   <Textarea 
@@ -205,7 +257,8 @@ export default function TimeLogs() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead>Project</TableHead>
+                      <TableHead>Work Type</TableHead>
+                      <TableHead>Lead / Project</TableHead>
                       <TableHead>Time In</TableHead>
                       <TableHead>Time Out</TableHead>
                       <TableHead>Total Hours</TableHead>
@@ -221,7 +274,14 @@ export default function TimeLogs() {
                           {format(new Date(log.date), "dd MMM yyyy")}
                         </TableCell>
                         <TableCell>
-                          {log.projects?.project_name || "-"}
+                          <Badge variant={log.work_type === 'project' ? 'default' : 'secondary'}>
+                            {log.work_type === 'project' ? 'Project' : 'Lead'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {log.work_type === 'lead' 
+                            ? log.leads?.customer_name || '-'
+                            : log.projects?.project_name || '-'}
                         </TableCell>
                         <TableCell>{formatTime(log.time_in)}</TableCell>
                         <TableCell>{formatTime(log.time_out)}</TableCell>

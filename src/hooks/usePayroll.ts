@@ -76,6 +76,7 @@ export function usePayroll() {
   });
 
   // Calculate total hours from time_logs for a specific month/year
+  // IMPORTANT: Only count PROJECT time logs (not LEAD - those are tracking only)
   const calculateHoursForPeriod = async (userId: string, month: number, year: number) => {
     const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
     const endDate = new Date(year, month, 0).toISOString().split('T')[0];
@@ -84,6 +85,7 @@ export function usePayroll() {
       .from('time_logs')
       .select('total_hours')
       .eq('user_id', userId)
+      .eq('work_type', 'project') // Only count PROJECT time, not LEAD
       .gte('date', startDate)
       .lte('date', endDate)
       .not('total_hours', 'is', null);

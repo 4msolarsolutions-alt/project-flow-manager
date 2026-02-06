@@ -7,6 +7,8 @@ type Expense = Database['public']['Tables']['expenses']['Row'];
 type ExpenseInsert = Database['public']['Tables']['expenses']['Insert'] & {
   bill_image_url?: string;
   expense_scope?: 'project' | 'company';
+  work_type?: string;
+  lead_id?: string | null;
 };
 type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'] & {
   verified_amount?: number;
@@ -27,6 +29,9 @@ export function useExpenses(projectId?: string) {
           *,
           projects (
             project_name
+          ),
+          leads (
+            customer_name
           )
         `)
         .order('created_at', { ascending: false });
@@ -39,11 +44,14 @@ export function useExpenses(projectId?: string) {
       if (error) throw error;
       return data as (Expense & { 
         projects: { project_name: string } | null;
+        leads: { customer_name: string } | null;
         bill_image_url?: string;
         verified_amount?: number;
         verification_status?: string;
         rejection_reason?: string;
         expense_scope?: string;
+        work_type?: string;
+        lead_id?: string;
       })[];
     },
   });

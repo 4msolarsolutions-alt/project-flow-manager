@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useProjects } from "@/hooks/useProjects";
+import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -28,13 +29,15 @@ const EXPENSE_TYPES = [
 export default function Expenses() {
   const { expenses, totals, isLoading, createExpense } = useExpenses();
   const { projects } = useProjects();
+  const { leads } = useLeads();
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [workType, setWorkType] = useState<string>("project");
   const [expenseType, setExpenseType] = useState<string>("");
-  const [expenseScope, setExpenseScope] = useState<string>("project");
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedLead, setSelectedLead] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [billFile, setBillFile] = useState<File | null>(null);
@@ -52,9 +55,10 @@ export default function Expenses() {
   const canApprove = isAdmin();
 
   const resetForm = () => {
+    setWorkType("project");
     setExpenseType("");
-    setExpenseScope("project");
     setSelectedProject("");
+    setSelectedLead("");
     setAmount("");
     setDescription("");
     setBillFile(null);
@@ -82,8 +86,12 @@ export default function Expenses() {
       toast({ title: "Error", description: "Please select expense type", variant: "destructive" });
       return;
     }
-    if (expenseScope === "project" && !selectedProject) {
+    if (workType === "project" && !selectedProject) {
       toast({ title: "Error", description: "Please select a project", variant: "destructive" });
+      return;
+    }
+    if (workType === "lead" && !selectedLead) {
+      toast({ title: "Error", description: "Please select a lead", variant: "destructive" });
       return;
     }
     if (!billFile) {
@@ -118,10 +126,15 @@ export default function Expenses() {
         .from('expense-bills')
         .getPublicUrl(fileName);
 
-      // Create expense record
+      // Create expense record with work_type logic
+      // Lead = Company expense, Project = Project expense
+      const expenseScope = workType === "lead" ? "company" : "project";
+      
       await createExpense.mutateAsync({
         expense_type: expenseType as "food" | "travel" | "material" | "other",
-        project_id: expenseScope === "project" ? selectedProject : null,
+        project_id: workType === "project" ? selectedProject : null,
+        lead_id: workType === "lead" ? selectedLead : null,
+        work_type: workType,
         amount: expenseAmount,
         description,
         submitted_by: user?.id,
@@ -262,19 +275,44 @@ export default function Expenses() {
                     </div>
 
                     <div>
-                      <Label>Expense Scope *</Label>
-                      <Select value={expenseScope} onValueChange={setExpenseScope}>
+                      <Label>Work Type *</Label>
+                      <Select value={workType} onValueChange={(value) => {
+                        setWorkType(value);
+                        setSelectedProject("");
+                        setSelectedLead("");
+                      }}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="project">Project Expense</SelectItem>
-                          <SelectItem value="company">Company Expense</SelectItem>
+                          <SelectItem value="lead">Lead Site Visit</SelectItem>
+                          <SelectItem value="project">Project Work</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {workType === "lead" ? "Company expense (pre-project)" : "Project expense"}
+                      </p>
                     </div>
 
-                    {expenseScope === "project" && (
+                    {workType === "lead" && (
+                      <div>
+                        <Label>Lead *</Label>
+                        <Select value={selectedLead} onValueChange={setSelectedLead}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select lead" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {leads?.map((lead) => (
+                              <SelectItem key={lead.id} value={lead.id}>
+                                {lead.customer_name} - {lead.address}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {workType === "project" && (
                       <div>
                         <Label>Project *</Label>
                         <Select value={selectedProject} onValueChange={setSelectedProject}>
@@ -422,7 +460,7 @@ export default function Expenses() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Project</TableHead>
+                      <TableHead>Lead / Project</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Bill</TableHead>
@@ -440,8 +478,9 @@ export default function Expenses() {
                         </TableCell>
                         <TableCell className="capitalize">{expense.expense_type}</TableCell>
                         <TableCell>
-                          {expense.projects?.project_name || 
-                            <span className="text-muted-foreground">Company</span>}
+                          {expense.work_type === 'lead' 
+                            ? <span className="text-muted-foreground">{expense.leads?.customer_name || 'Lead'}</span>
+                            : expense.projects?.project_name || <span className="text-muted-foreground">Company</span>}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {expense.description || '-'}
