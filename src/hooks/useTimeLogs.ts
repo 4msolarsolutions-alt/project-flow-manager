@@ -6,7 +6,9 @@ import { useAuth } from '@/hooks/useAuth';
 export interface TimeLog {
   id: string;
   user_id: string;
+  work_type: string | null;
   project_id: string | null;
+  lead_id: string | null;
   date: string;
   time_in: string | null;
   time_out: string | null;
@@ -21,6 +23,9 @@ export interface TimeLog {
   projects?: {
     project_name: string;
   } | null;
+  leads?: {
+    customer_name: string;
+  } | null;
   profiles?: {
     first_name: string | null;
     last_name: string | null;
@@ -28,7 +33,9 @@ export interface TimeLog {
 }
 
 interface ClockInData {
+  work_type?: string;
   project_id?: string;
+  lead_id?: string;
   latitude: string;
   longitude: string;
   notes?: string;
@@ -54,13 +61,14 @@ export function useTimeLogs() {
         .from('time_logs')
         .select(`
           *,
-          projects (project_name)
+          projects (project_name),
+          leads (customer_name)
         `)
         .order('date', { ascending: false })
         .order('time_in', { ascending: false });
       
       if (error) throw error;
-      return data as TimeLog[];
+      return data as (TimeLog & { leads?: { customer_name: string } | null })[];
     },
     enabled: !!user,
   });
@@ -96,7 +104,9 @@ export function useTimeLogs() {
         .from('time_logs')
         .insert({
           user_id: user.id,
+          work_type: data.work_type || 'project',
           project_id: data.project_id || null,
+          lead_id: data.lead_id || null,
           time_in: new Date().toISOString(),
           latitude_in: data.latitude,
           longitude_in: data.longitude,

@@ -171,6 +171,7 @@ export type Database = {
           expense_scope: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
           id: string
+          lead_id: string | null
           persons: number | null
           project_id: string | null
           rate_per_day: number | null
@@ -180,6 +181,7 @@ export type Database = {
           updated_at: string | null
           verification_status: string | null
           verified_amount: number | null
+          work_type: string | null
         }
         Insert: {
           amount: number
@@ -192,6 +194,7 @@ export type Database = {
           expense_scope?: string | null
           expense_type: Database["public"]["Enums"]["expense_type"]
           id?: string
+          lead_id?: string | null
           persons?: number | null
           project_id?: string | null
           rate_per_day?: number | null
@@ -201,6 +204,7 @@ export type Database = {
           updated_at?: string | null
           verification_status?: string | null
           verified_amount?: number | null
+          work_type?: string | null
         }
         Update: {
           amount?: number
@@ -213,6 +217,7 @@ export type Database = {
           expense_scope?: string | null
           expense_type?: Database["public"]["Enums"]["expense_type"]
           id?: string
+          lead_id?: string | null
           persons?: number | null
           project_id?: string | null
           rate_per_day?: number | null
@@ -222,8 +227,16 @@ export type Database = {
           updated_at?: string | null
           verification_status?: string | null
           verified_amount?: number | null
+          work_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_project_id_fkey"
             columns: ["project_id"]
@@ -837,11 +850,13 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          lead_id: string | null
           priority: string | null
           project_id: string | null
           status: Database["public"]["Enums"]["task_status"] | null
           title: string
           updated_at: string | null
+          work_type: string | null
         }
         Insert: {
           assigned_by?: string | null
@@ -852,11 +867,13 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          lead_id?: string | null
           priority?: string | null
           project_id?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           title: string
           updated_at?: string | null
+          work_type?: string | null
         }
         Update: {
           assigned_by?: string | null
@@ -867,11 +884,13 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          lead_id?: string | null
           priority?: string | null
           project_id?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           title?: string
           updated_at?: string | null
+          work_type?: string | null
         }
         Relationships: [
           {
@@ -879,6 +898,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
@@ -897,6 +923,7 @@ export type Database = {
           id: string
           latitude_in: string | null
           latitude_out: string | null
+          lead_id: string | null
           longitude_in: string | null
           longitude_out: string | null
           notes: string | null
@@ -906,6 +933,7 @@ export type Database = {
           total_hours: number | null
           updated_at: string
           user_id: string
+          work_type: string | null
         }
         Insert: {
           created_at?: string
@@ -913,6 +941,7 @@ export type Database = {
           id?: string
           latitude_in?: string | null
           latitude_out?: string | null
+          lead_id?: string | null
           longitude_in?: string | null
           longitude_out?: string | null
           notes?: string | null
@@ -922,6 +951,7 @@ export type Database = {
           total_hours?: number | null
           updated_at?: string
           user_id: string
+          work_type?: string | null
         }
         Update: {
           created_at?: string
@@ -929,6 +959,7 @@ export type Database = {
           id?: string
           latitude_in?: string | null
           latitude_out?: string | null
+          lead_id?: string | null
           longitude_in?: string | null
           longitude_out?: string | null
           notes?: string | null
@@ -938,8 +969,16 @@ export type Database = {
           total_hours?: number | null
           updated_at?: string
           user_id?: string
+          work_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "time_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "time_logs_project_id_fkey"
             columns: ["project_id"]
@@ -1042,6 +1081,7 @@ export type Database = {
       quote_status: "draft" | "sent" | "approved" | "rejected"
       structure_material: "ms" | "aluminium" | "gi"
       task_status: "pending" | "in_progress" | "completed" | "delayed"
+      work_type: "lead" | "project"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1221,6 +1261,7 @@ export const Constants = {
       quote_status: ["draft", "sent", "approved", "rejected"],
       structure_material: ["ms", "aluminium", "gi"],
       task_status: ["pending", "in_progress", "completed", "delayed"],
+      work_type: ["lead", "project"],
     },
   },
 } as const

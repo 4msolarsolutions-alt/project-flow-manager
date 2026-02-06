@@ -22,6 +22,7 @@ import {
 import { Plus, AlertCircle, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
+import { useLeads } from "@/hooks/useLeads";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
@@ -77,7 +78,9 @@ const TaskCard = ({ task, completed = false, onStatusChange }: TaskCardProps) =>
             {task.title}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {task.projects?.project_name || 'No project'}
+            {task.work_type === 'lead' 
+              ? task.leads?.customer_name || 'Lead task'
+              : task.projects?.project_name || 'No project'}
           </p>
           {task.description && (
             <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
@@ -107,6 +110,7 @@ const TaskCard = ({ task, completed = false, onStatusChange }: TaskCardProps) =>
 const Tasks = () => {
   const { tasks, isLoading, createTask, updateTaskStatus } = useTasks();
   const { projects } = useProjects();
+  const { leads } = useLeads();
   const { data: users } = useUsers();
   const { user } = useAuth();
   
@@ -117,7 +121,9 @@ const Tasks = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    work_type: "project",
     project_id: "",
+    lead_id: "",
     assigned_to: "",
     assigned_role: "" as Database['public']['Enums']['app_role'] | "",
     priority: "medium",
@@ -146,7 +152,9 @@ const Tasks = () => {
       await createTask.mutateAsync({
         title: formData.title,
         description: formData.description || null,
-        project_id: formData.project_id || null,
+        work_type: formData.work_type,
+        project_id: formData.work_type === "project" && formData.project_id ? formData.project_id : null,
+        lead_id: formData.work_type === "lead" && formData.lead_id ? formData.lead_id : null,
         assigned_to: formData.assigned_to || null,
         assigned_role: formData.assigned_role as Database['public']['Enums']['app_role'] || null,
         priority: formData.priority,
@@ -159,7 +167,9 @@ const Tasks = () => {
       setFormData({
         title: "",
         description: "",
+        work_type: "project",
         project_id: "",
+        lead_id: "",
         assigned_to: "",
         assigned_role: "",
         priority: "medium",
@@ -326,42 +336,86 @@ const Tasks = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="project">Project</Label>
+                <Label htmlFor="work_type">Work Type *</Label>
                 <Select
-                  value={formData.project_id}
-                  onValueChange={(value) => setFormData({ ...formData, project_id: value })}
+                  value={formData.work_type}
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    work_type: value,
+                    project_id: "",
+                    lead_id: ""
+                  })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects?.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.project_name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="lead">Lead Site Visit</SelectItem>
+                    <SelectItem value="project">Project Work</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="assigned_to">Assign To</Label>
-                <Select
-                  value={formData.assigned_to}
-                  onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select person" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users?.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.first_name} {u.last_name || ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
+              {formData.work_type === "lead" && (
+                <div className="space-y-2">
+                  <Label htmlFor="lead">Lead</Label>
+                  <Select
+                    value={formData.lead_id}
+                    onValueChange={(value) => setFormData({ ...formData, lead_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select lead" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {leads?.map((lead) => (
+                        <SelectItem key={lead.id} value={lead.id}>
+                          {lead.customer_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.work_type === "project" && (
+                <div className="space-y-2">
+                  <Label htmlFor="project">Project</Label>
+                  <Select
+                    value={formData.project_id}
+                    onValueChange={(value) => setFormData({ ...formData, project_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects?.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.project_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assigned_to">Assign To *</Label>
+              <Select
+                value={formData.assigned_to}
+                onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select person" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users?.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.first_name} {u.last_name || ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="grid grid-cols-2 gap-4">

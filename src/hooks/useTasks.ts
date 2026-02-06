@@ -21,6 +21,9 @@ export function useTasks(projectId?: string) {
           projects (
             project_name
           ),
+          leads (
+            customer_name
+          ),
           profiles!fk_tasks_assigned_to_profiles (
             id,
             first_name,
