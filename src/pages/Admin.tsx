@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { UserStatusDialog } from "@/components/admin/UserStatusDialog";
 import { AddEmployeeDialog } from "@/components/admin/AddEmployeeDialog";
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import {
   Search,
   Filter,
@@ -43,6 +44,7 @@ import {
   Users,
   UserCheck,
   UserX,
+  Key,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -75,6 +77,7 @@ const Admin = () => {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
 
   // Check admin access
   if (!isAdmin()) {
@@ -322,6 +325,15 @@ const Admin = () => {
                             <Shield className="mr-2 h-4 w-4" />
                             Manage Roles
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setResetPasswordOpen(true);
+                            }}
+                          >
+                            <Key className="mr-2 h-4 w-4" />
+                            Reset Password
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
@@ -362,6 +374,12 @@ const Admin = () => {
         user={selectedUser}
         open={statusDialogOpen}
         onOpenChange={statusDialogOpen ? setStatusDialogOpen : () => {}}
+      />
+
+      <ResetPasswordDialog
+        user={selectedUser}
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
       />
 
       <AddEmployeeDialog open={addEmployeeOpen} onOpenChange={setAddEmployeeOpen} />
