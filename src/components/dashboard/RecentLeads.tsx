@@ -6,71 +6,74 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const leads = [
-  {
-    id: 1,
-    name: "Rajesh Kumar",
-    phone: "+91 98765 43210",
-    address: "Sector 15, Noida",
-    type: "Residential",
-    status: "New",
-    kw: "5 KW",
-  },
-  {
-    id: 2,
-    name: "Priya Sharma",
-    phone: "+91 87654 32109",
-    address: "DLF Phase 3, Gurugram",
-    type: "Commercial",
-    status: "Site Visit Scheduled",
-    kw: "25 KW",
-  },
-  {
-    id: 3,
-    name: "Amit Patel",
-    phone: "+91 76543 21098",
-    address: "Vashi, Navi Mumbai",
-    type: "Industrial",
-    status: "Quotation Sent",
-    kw: "100 KW",
-  },
-  {
-    id: 4,
-    name: "Sunita Verma",
-    phone: "+91 65432 10987",
-    address: "Whitefield, Bangalore",
-    type: "Residential",
-    status: "Negotiation",
-    kw: "10 KW",
-  },
-];
+import { useLeads } from "@/hooks/useLeads";
+import { useNavigate } from "react-router-dom";
 
 const getStatusClass = (status: string) => {
   switch (status) {
-    case "New":
+    case "new_call":
       return "status-new";
-    case "Site Visit Scheduled":
+    case "site_visit_required":
+    case "site_visit_assigned":
+    case "site_visit_completed":
+    case "quotation_prepared":
+    case "quote_sent":
       return "status-in-progress";
-    case "Quotation Sent":
-      return "status-in-progress";
-    case "Negotiation":
-      return "status-in-progress";
-    case "Won":
+    case "customer_approved":
+    case "payment_received":
+    case "completed":
       return "status-completed";
-    case "Lost":
+    case "cancelled":
       return "status-cancelled";
     default:
       return "status-new";
   }
 };
 
+const formatStatus = (status: string) => {
+  return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
 export function RecentLeads() {
+  const { leads, isLoading } = useLeads();
+  const navigate = useNavigate();
+  
+  const recentLeads = leads?.slice(0, 5) || [];
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl bg-card border border-border animate-fade-in">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h3 className="text-lg font-semibold">Recent Leads</h3>
+        </div>
+        <div className="p-6 text-center text-muted-foreground">
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  if (recentLeads.length === 0) {
+    return (
+      <div className="rounded-xl bg-card border border-border animate-fade-in">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h3 className="text-lg font-semibold">Recent Leads</h3>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
+            Add Lead
+          </Button>
+        </div>
+        <div className="p-6 text-center text-muted-foreground">
+          No leads yet. Start by adding your first lead.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl bg-card border border-border animate-fade-in">
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <h3 className="text-lg font-semibold">Recent Leads</h3>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
           View All
         </Button>
       </div>
@@ -80,17 +83,16 @@ export function RecentLeads() {
             <tr>
               <th>Customer</th>
               <th>Type</th>
-              <th>Capacity</th>
               <th>Status</th>
               <th className="w-10"></th>
             </tr>
           </thead>
           <tbody>
-            {leads.map((lead) => (
+            {recentLeads.map((lead) => (
               <tr key={lead.id}>
                 <td>
                   <div>
-                    <p className="font-medium text-foreground">{lead.name}</p>
+                    <p className="font-medium text-foreground">{lead.customer_name}</p>
                     <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Phone className="h-3 w-3" />
@@ -98,20 +100,17 @@ export function RecentLeads() {
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {lead.address}
+                        {lead.city || lead.address}
                       </span>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span className="text-sm text-muted-foreground">{lead.type}</span>
-                </td>
-                <td>
-                  <span className="font-medium">{lead.kw}</span>
+                  <span className="text-sm text-muted-foreground capitalize">{lead.project_type}</span>
                 </td>
                 <td>
                   <span className={`status-badge ${getStatusClass(lead.status)}`}>
-                    {lead.status}
+                    {formatStatus(lead.status)}
                   </span>
                 </td>
                 <td>
@@ -122,9 +121,9 @@ export function RecentLeads() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Schedule Visit</DropdownMenuItem>
-                      <DropdownMenuItem>Create Quotation</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/leads')}>View Details</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/site-visits')}>Schedule Visit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/quotations')}>Create Quotation</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </td>
