@@ -44,6 +44,7 @@ const employeeSchema = z.object({
       (v) => !v || /^[+0-9][0-9\s-]{6,}$/.test(v),
       "Enter a valid phone (digits, +, spaces, -)"
     ),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 interface AddEmployeeDialogProps {
@@ -58,6 +59,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<Set<AppRole>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -73,6 +75,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
     setLastName("");
     setEmail("");
     setPhone("");
+    setPassword("");
     setSelectedRoles(new Set());
     setErrors({});
   };
@@ -83,6 +86,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
       last_name: lastName,
       email,
       phone,
+      password,
     });
 
     if (parsed.success) {
@@ -109,6 +113,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
       last_name: data.last_name?.trim() || null,
       email: data.email,
       phone: data.phone?.trim() || null,
+      password: data.password,
       roles: Array.from(selectedRoles),
     });
 
@@ -140,7 +145,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
             Add Employee
           </DialogTitle>
           <DialogDescription>
-            Creates an employee login and adds them to the system. They’ll receive an email to set their password.
+            Creates an employee login. They can log in immediately with the password you set.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,6 +183,19 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
               disabled={isLoading}
             />
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emp-password">Password</Label>
+            <Input
+              id="emp-password"
+              type="password"
+              placeholder="Min 6 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
 
           <div className="space-y-2">

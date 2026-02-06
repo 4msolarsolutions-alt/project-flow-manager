@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
     const last_name = typeof body.last_name === "string" ? body.last_name.trim() : null;
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : null;
+    const password = typeof body.password === "string" ? body.password : "";
     const roles: AppRole[] = Array.isArray(body.roles)
       ? body.roles.filter((r: unknown) => typeof r === "string" && allowedRoles.has(r as AppRole))
       : [];
@@ -125,24 +126,33 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!password || password.length < 6) {
+      return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // 3) Service client to create/invite user and write DB rows
+    // 3) Service client to create user and write DB rows
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
 
-    // Invite user by email so they set their password themselves.
-    const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: {
+    // Create user with password directly (no email confirmation needed)
+    const { data: createData, error: createErr } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm so they can log in immediately
+      user_metadata: {
         first_name,
         last_name: last_name ?? "",
         login_type: "employee",
       },
     });
 
-    if (inviteErr || !inviteData?.user) {
+    if (createErr || !createData?.user) {
       return new Response(
-        JSON.stringify({ error: inviteErr?.message ?? "Failed to invite user" }),
+        JSON.stringify({ error: createErr?.message ?? "Failed to create user" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -150,7 +160,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const newUserId = inviteData.user.id;
+    const newUserId = createData.user.id;
 
     // Ensure profile exists (some setups don’t auto-create profiles on invite)
     const { error: profileErr } = await adminClient

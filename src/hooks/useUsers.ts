@@ -169,6 +169,7 @@ export function useCreateEmployee() {
       last_name: string | null;
       email: string;
       phone: string | null;
+      password: string;
       roles: AppRole[];
     }) => {
       const { data, error } = await supabase.functions.invoke("admin-create-employee", {
@@ -182,7 +183,7 @@ export function useCreateEmployee() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
         title: "Employee created",
-        description: "Invite email sent. The employee will appear in dropdowns once created.",
+        description: "Employee account is ready. They can now log in with their credentials.",
       });
     },
     onError: (error: Error) => {
