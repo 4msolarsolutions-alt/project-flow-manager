@@ -6,15 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useTimeLogs, useGeolocation } from "@/hooks/useTimeLogs";
+import { useTimeLogs, useGeolocation, formatHoursMinutes } from "@/hooks/useTimeLogs";
 import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
-import { Clock, MapPin, Play, Square, Loader2, AlertCircle } from "lucide-react";
+import { Clock, MapPin, Play, Square, Loader2, AlertCircle, Calendar, Briefcase } from "lucide-react";
 
 export default function TimeLogs() {
-  const { timeLogs, isLoading, activeSession, clockIn, clockOut } = useTimeLogs();
+  const { timeLogs, isLoading, activeSession, todayStats, monthStats, clockIn, clockOut } = useTimeLogs();
   const { projects } = useProjects();
   const { leads } = useLeads();
   const { getLocation } = useGeolocation();
@@ -26,6 +26,11 @@ export default function TimeLogs() {
   const [notes, setNotes] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Filter to only active/in-progress projects
+  const activeProjects = projects?.filter(p => 
+    p.status !== 'completed' && p.status !== 'cancelled'
+  );
 
   const handleClockIn = async () => {
     setIsGettingLocation(true);
@@ -46,7 +51,9 @@ export default function TimeLogs() {
       setSelectedLead("");
       setWorkType("project");
     } catch (error) {
-      setLocationError(error instanceof Error ? error.message : 'Failed to get location');
+      if (error instanceof Error && !error.message.includes('Clock In Failed')) {
+        setLocationError(error.message);
+      }
     } finally {
       setIsGettingLocation(false);
     }
@@ -68,7 +75,9 @@ export default function TimeLogs() {
       });
       setNotes("");
     } catch (error) {
-      setLocationError(error instanceof Error ? error.message : 'Failed to get location');
+      if (error instanceof Error && !error.message.includes('Clock Out Failed')) {
+        setLocationError(error.message);
+      }
     } finally {
       setIsGettingLocation(false);
     }
@@ -79,21 +88,75 @@ export default function TimeLogs() {
     return format(new Date(timeString), "hh:mm a");
   };
 
-  const formatHours = (hours: number | null) => {
-    if (hours === null) return "-";
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    return `${h}h ${m}m`;
-  };
-
   const formatCoordinates = (lat: string | null, lng: string | null) => {
     if (!lat || !lng) return "-";
     return `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`;
   };
 
+  // Format minutes to "Xh Ym"
+  const formatMinutesToHours = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  };
+
   return (
     <AppLayout title="Time Logs">
       <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Hours</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatMinutesToHours(todayStats?.totalMinutes || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Project: {formatMinutesToHours(todayStats?.projectMinutes || 0)} | Lead: {formatMinutesToHours(todayStats?.leadMinutes || 0)}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatMinutesToHours(monthStats?.totalMinutes || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Payroll Hours: {formatMinutesToHours(monthStats?.projectMinutes || 0)}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Status</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {activeSession ? (
+                  <Badge variant="default" className="text-lg px-3 py-1">Active</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-lg px-3 py-1">Not Clocked In</Badge>
+                )}
+              </div>
+              {activeSession && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Since {formatTime(activeSession.time_in)}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Clock In/Out Card */}
         <Card className="border-primary/20">
           <CardHeader>
@@ -140,7 +203,7 @@ export default function TimeLogs() {
 
                   {workType === "lead" && (
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Lead *</label>
+                      <label className="text-sm font-medium mb-2 block">Lead</label>
                       <Select value={selectedLead} onValueChange={setSelectedLead}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select lead" />
@@ -159,20 +222,26 @@ export default function TimeLogs() {
 
                   {workType === "project" && (
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Project</label>
+                      <label className="text-sm font-medium mb-2 block">Project *</label>
                       <Select value={selectedProject} onValueChange={setSelectedProject}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">No specific project</SelectItem>
-                          {projects?.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.project_name}
-                            </SelectItem>
-                          ))}
+                          {activeProjects?.length === 0 ? (
+                            <SelectItem value="none" disabled>No active projects</SelectItem>
+                          ) : (
+                            activeProjects?.map((project) => (
+                              <SelectItem key={project.id} value={project.id}>
+                                {project.project_name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Required for project work
+                      </p>
                     </div>
                   )}
                 </div>
@@ -191,6 +260,11 @@ export default function TimeLogs() {
 
             {activeSession && (
               <div className="p-4 bg-primary/5 rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant={activeSession.work_type === 'project' ? 'default' : 'secondary'}>
+                    {activeSession.work_type === 'project' ? 'Project Work' : 'Lead Visit'}
+                  </Badge>
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <MapPin className="h-4 w-4 text-primary" />
                   <span>Check-in Location: {formatCoordinates(activeSession.latitude_in, activeSession.longitude_in)}</span>
@@ -219,7 +293,7 @@ export default function TimeLogs() {
               ) : (
                 <Button 
                   onClick={handleClockIn}
-                  disabled={isGettingLocation || clockIn.isPending}
+                  disabled={isGettingLocation || clockIn.isPending || (workType === 'project' && !selectedProject)}
                   className="gap-2"
                 >
                   {(isGettingLocation || clockIn.isPending) ? (
@@ -286,7 +360,7 @@ export default function TimeLogs() {
                         <TableCell>{formatTime(log.time_in)}</TableCell>
                         <TableCell>{formatTime(log.time_out)}</TableCell>
                         <TableCell className="font-medium">
-                          {formatHours(log.total_hours)}
+                          {formatHoursMinutes(log.total_hours)}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {formatCoordinates(log.latitude_in, log.longitude_in)}
@@ -295,7 +369,7 @@ export default function TimeLogs() {
                           {formatCoordinates(log.latitude_out, log.longitude_out)}
                         </TableCell>
                         <TableCell>
-                          {log.time_out ? (
+                          {log.status === 'completed' ? (
                             <Badge variant="default">Completed</Badge>
                           ) : (
                             <Badge variant="secondary">Active</Badge>
