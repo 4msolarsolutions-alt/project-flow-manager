@@ -928,6 +928,7 @@ export type Database = {
           longitude_out: string | null
           notes: string | null
           project_id: string | null
+          status: string | null
           time_in: string | null
           time_out: string | null
           total_hours: number | null
@@ -946,6 +947,7 @@ export type Database = {
           longitude_out?: string | null
           notes?: string | null
           project_id?: string | null
+          status?: string | null
           time_in?: string | null
           time_out?: string | null
           total_hours?: number | null
@@ -964,6 +966,7 @@ export type Database = {
           longitude_out?: string | null
           notes?: string | null
           project_id?: string | null
+          status?: string | null
           time_in?: string | null
           time_out?: string | null
           total_hours?: number | null
