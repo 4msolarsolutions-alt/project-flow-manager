@@ -222,3 +222,33 @@ export function useResetPassword() {
     },
   });
 }
+
+export function useConfirmEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-confirm-email", {
+        body: { user_id: userId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Email confirmed",
+        description: data?.message || "The user's email has been confirmed successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error confirming email",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
