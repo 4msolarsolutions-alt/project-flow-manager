@@ -68,11 +68,11 @@ const employeeNavItems = [
 // Customer sidebar items
 const customerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/customer-dashboard" },
-  { icon: FolderKanban, label: "My Project", path: "/customer-dashboard" },
-  { icon: Wallet, label: "Payments", path: "/customer-dashboard" },
-  { icon: FileCheck, label: "Warranty", path: "/customer-dashboard" },
-  { icon: FileText, label: "Documents", path: "/customer-dashboard" },
-  { icon: Headphones, label: "Support", path: "/customer-dashboard" },
+  { icon: FolderKanban, label: "My Project", path: "/customer/project" },
+  { icon: Wallet, label: "Payments", path: "/customer/payments" },
+  { icon: FileCheck, label: "Warranty", path: "/customer/warranty" },
+  { icon: FileText, label: "Documents", path: "/customer/documents" },
+  { icon: Headphones, label: "Support", path: "/customer/support" },
 ];
 
 interface RoleSidebarProps {

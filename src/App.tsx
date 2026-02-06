@@ -23,6 +23,11 @@ import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import CustomerProject from "./pages/customer/CustomerProject";
+import CustomerPayments from "./pages/customer/CustomerPayments";
+import CustomerWarranty from "./pages/customer/CustomerWarranty";
+import CustomerDocuments from "./pages/customer/CustomerDocuments";
+import CustomerSupport from "./pages/customer/CustomerSupport";
 import { Loader2 } from "lucide-react";
 import { useCustomerProjects } from "./hooks/useCustomerProjects";
 
@@ -134,6 +139,11 @@ const AppRoutes = () => (
     
     {/* Customer Routes */}
     <Route path="/customer-dashboard" element={<CustomerRoute><CustomerDashboard /></CustomerRoute>} />
+    <Route path="/customer/project" element={<CustomerRoute><CustomerProject /></CustomerRoute>} />
+    <Route path="/customer/payments" element={<CustomerRoute><CustomerPayments /></CustomerRoute>} />
+    <Route path="/customer/warranty" element={<CustomerRoute><CustomerWarranty /></CustomerRoute>} />
+    <Route path="/customer/documents" element={<CustomerRoute><CustomerDocuments /></CustomerRoute>} />
+    <Route path="/customer/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
     <Route path="/waiting-for-project" element={<ProtectedRoute><WaitingForProject /></ProtectedRoute>} />
     
     {/* Staff/Admin Routes */}

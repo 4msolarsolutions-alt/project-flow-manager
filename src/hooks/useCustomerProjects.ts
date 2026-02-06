@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export interface CustomerProject {
   id: string;
+  lead_id: string | null;
   project_name: string;
   project_type: string;
   status: string | null;
