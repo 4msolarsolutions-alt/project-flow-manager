@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -136,7 +136,7 @@ const Payments = () => {
   };
 
   return (
-    <Layout title="Payments">
+    <AppLayout title="Payments">
       {/* Stats */}
       <div className="mb-6 grid gap-6 md:grid-cols-4">
         <StatCard
@@ -435,7 +435,7 @@ const Payments = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </AppLayout>
   );
 };
 

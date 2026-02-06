@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -213,7 +213,7 @@ const Projects = () => {
   };
 
   return (
-    <Layout title="Projects">
+    <AppLayout title="Projects">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <p className="text-muted-foreground">
@@ -755,7 +755,7 @@ const Projects = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </AppLayout>
   );
 };
 

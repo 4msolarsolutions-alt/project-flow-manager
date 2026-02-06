@@ -1,4 +1,4 @@
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTasks } from "@/hooks/useTasks";
 import { useSiteVisits } from "@/hooks/useSiteVisits";
 import { useProjects } from "@/hooks/useProjects";
+import { useTimeLogs } from "@/hooks/useTimeLogs";
 import { 
   ClipboardList, 
   Calendar, 
@@ -13,16 +14,25 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  Play,
+  Square,
+  DollarSign
 } from "lucide-react";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const EmployeeDashboard = () => {
   const { user, profile } = useAuth();
   const { tasks, isLoading: tasksLoading } = useTasks();
   const { siteVisits, isLoading: visitsLoading } = useSiteVisits();
   const { projects, isLoading: projectsLoading } = useProjects();
+  const { activeSession, clockIn, clockOut, isLoading: timeLoading, timeLogs } = useTimeLogs();
+  
+  // Get today's completed log for hours display
+  const today = new Date().toISOString().split('T')[0];
+  const todayLog = timeLogs?.find(log => log.date === today && log.user_id === user?.id);
 
   // Filter data for current user
   const myTasks = tasks?.filter(task => task.assigned_to === user?.id) || [];
@@ -42,6 +52,63 @@ const EmployeeDashboard = () => {
     .filter(v => v.status === 'scheduled' && v.scheduled_date)
     .sort((a, b) => new Date(a.scheduled_date!).getTime() - new Date(b.scheduled_date!).getTime())
     .slice(0, 5);
+
+  const isClockedIn = activeSession && activeSession.time_in && !activeSession.time_out;
+
+  const handleStartWork = async () => {
+    try {
+      // Get location if available
+      let location = { latitude: null, longitude: null };
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          location = {
+            latitude: pos.coords.latitude.toString() as any,
+            longitude: pos.coords.longitude.toString() as any,
+          };
+        } catch {
+          // Location not available
+        }
+      }
+      await clockIn.mutateAsync({
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      toast.success("Work started! You're now clocked in.");
+    } catch (error) {
+      toast.error("Failed to start work");
+    }
+  };
+
+  const handleEndWork = async () => {
+    if (!activeSession) return;
+    try {
+      let location = { latitude: null, longitude: null };
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          location = {
+            latitude: pos.coords.latitude.toString() as any,
+            longitude: pos.coords.longitude.toString() as any,
+          };
+        } catch {
+          // Location not available
+        }
+      }
+      await clockOut.mutateAsync({
+        id: activeSession.id,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      toast.success("Work ended! You're now clocked out.");
+    } catch (error) {
+      toast.error("Failed to end work");
+    }
+  };
 
   const getPriorityColor = (priority: string | null) => {
     switch (priority) {
@@ -69,107 +136,136 @@ const EmployeeDashboard = () => {
   };
 
   return (
-    <Layout title={`Welcome, ${profile?.first_name || 'Employee'}`}>
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <AppLayout title="My Dashboard">
+      {/* Summary Stats - Row 1 */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-warning/10">
-              <Clock className="h-6 w-6 text-warning" />
+          <CardContent className="flex items-center gap-3 p-4 md:p-6">
+            <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-info/10 shrink-0">
+              <FolderKanban className="h-5 w-5 md:h-6 md:w-6 text-info" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Pending Tasks</p>
-              <p className="text-2xl font-bold">{pendingTasks.length}</p>
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm text-muted-foreground">My Projects</p>
+              <p className="text-xl md:text-2xl font-bold">{myProjects.length}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-info/10">
-              <ClipboardList className="h-6 w-6 text-info" />
+          <CardContent className="flex items-center gap-3 p-4 md:p-6">
+            <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-warning/10 shrink-0">
+              <ClipboardList className="h-5 w-5 md:h-6 md:w-6 text-warning" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">In Progress</p>
-              <p className="text-2xl font-bold">{inProgressTasks.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
-              <CheckCircle2 className="h-6 w-6 text-success" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Completed</p>
-              <p className="text-2xl font-bold">{completedTasks.length}</p>
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm text-muted-foreground">Pending Tasks</p>
+              <p className="text-xl md:text-2xl font-bold">{pendingTasks.length}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
-              <AlertCircle className="h-6 w-6 text-destructive" />
+          <CardContent className="flex items-center gap-3 p-4 md:p-6">
+            <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-success/10 shrink-0">
+              <Clock className="h-5 w-5 md:h-6 md:w-6 text-success" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Overdue</p>
-              <p className="text-2xl font-bold">{overdueTasks.length}</p>
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm text-muted-foreground">Today Hours</p>
+              <p className="text-xl md:text-2xl font-bold">{todayLog?.total_hours?.toFixed(1) || "0"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4 md:p-6">
+            <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+              <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm text-muted-foreground">This Month</p>
+              <p className="text-xl md:text-2xl font-bold">-</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      {/* Action Area - Start/End Work - Row 2 */}
+      <Card className="mt-4 md:mt-6 border-2 border-dashed">
+        <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 md:p-6">
+          <div className="text-center sm:text-left">
+            <h3 className="font-semibold text-lg">
+              {isClockedIn ? "Currently Working" : "Ready to Start?"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {isClockedIn 
+                ? `Started at ${activeSession?.time_in ? format(new Date(activeSession.time_in), 'h:mm a') : ''}`
+                : "Clock in to start tracking your time"
+              }
+            </p>
+          </div>
+          {isClockedIn ? (
+            <Button 
+              size="lg" 
+              variant="destructive" 
+              className="gap-2 w-full sm:w-auto"
+              onClick={handleEndWork}
+              disabled={clockOut.isPending}
+            >
+              <Square className="h-5 w-5" />
+              End Work
+            </Button>
+          ) : (
+            <Button 
+              size="lg" 
+              className="gap-2 bg-success hover:bg-success/90 w-full sm:w-auto"
+              onClick={handleStartWork}
+              disabled={clockIn.isPending || (todayLog && !!todayLog.time_out)}
+            >
+              <Play className="h-5 w-5" />
+              Start Work
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Main Content Grid - Row 3 */}
+      <div className="mt-4 md:mt-6 grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* My Tasks */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <ClipboardList className="h-5 w-5" />
-              My Tasks
+              My Tasks (Today)
             </CardTitle>
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link to="/tasks">
-                View All <ArrowRight className="ml-1 h-4 w-4" />
+                View All <ArrowRight className="ml-1 h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>
           <CardContent>
             {tasksLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : myTasks.length === 0 ? (
-              <p className="text-muted-foreground">No tasks assigned to you</p>
+              <p className="text-muted-foreground text-sm">Loading...</p>
+            ) : myTasks.filter(t => t.status !== 'completed').length === 0 ? (
+              <p className="text-muted-foreground text-sm">No pending tasks</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {myTasks
                   .filter(t => t.status !== 'completed')
                   .slice(0, 5)
                   .map(task => (
                     <div
                       key={task.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
+                      className="flex items-center justify-between rounded-lg border p-2 md:p-3"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{task.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {task.projects?.project_name && (
-                            <span className="text-xs text-muted-foreground truncate">
-                              {task.projects.project_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-2">
-                        {task.due_date && (
-                          <span className={`text-xs ${isPast(new Date(task.due_date)) && task.status !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                            {formatDueDate(task.due_date)}
+                        <p className="font-medium truncate text-sm">{task.title}</p>
+                        {task.projects?.project_name && (
+                          <span className="text-xs text-muted-foreground">
+                            {task.projects.project_name}
                           </span>
                         )}
-                        <Badge className={getPriorityColor(task.priority)} variant="secondary">
-                          {task.priority}
-                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
                         <Badge className={getStatusColor(task.status)} variant="secondary">
                           {task.status?.replace('_', ' ')}
                         </Badge>
@@ -181,51 +277,40 @@ const EmployeeDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Upcoming Site Visits */}
+        {/* My Projects */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Upcoming Site Visits
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <FolderKanban className="h-5 w-5" />
+              My Projects
             </CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/site-visits">
-                View All <ArrowRight className="ml-1 h-4 w-4" />
+            <Button variant="ghost" size="sm" asChild className="text-xs">
+              <Link to="/projects">
+                View All <ArrowRight className="ml-1 h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>
           <CardContent>
-            {visitsLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : upcomingSiteVisits.length === 0 ? (
-              <p className="text-muted-foreground">No upcoming site visits</p>
+            {projectsLoading ? (
+              <p className="text-muted-foreground text-sm">Loading...</p>
+            ) : myProjects.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No projects assigned</p>
             ) : (
-              <div className="space-y-3">
-                {upcomingSiteVisits.map(visit => (
+              <div className="space-y-2">
+                {myProjects.slice(0, 5).map(project => (
                   <div
-                    key={visit.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    key={project.id}
+                    className="flex items-center justify-between rounded-lg border p-2 md:p-3"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                        {visit.leads?.customer_name || 'Unknown Customer'}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {visit.leads?.address}
-                      </p>
+                      <p className="font-medium truncate text-sm">{project.project_name}</p>
+                      {project.capacity_kw && (
+                        <span className="text-xs text-muted-foreground">{project.capacity_kw} kW</span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 ml-2">
-                      <div className="text-right">
-                        <p className={`text-sm font-medium ${isToday(new Date(visit.scheduled_date!)) ? 'text-primary' : ''}`}>
-                          {formatDueDate(visit.scheduled_date!)}
-                        </p>
-                        {visit.scheduled_time && (
-                          <p className="text-xs text-muted-foreground">
-                            {visit.scheduled_time}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <Badge variant="outline" className="capitalize text-xs">
+                      {project.status?.replace('_', ' ')}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -233,53 +318,7 @@ const EmployeeDashboard = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Active Projects */}
-      {myProjects.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FolderKanban className="h-5 w-5" />
-              My Projects
-            </CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/projects">
-                View All <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {projectsLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {myProjects.slice(0, 6).map(project => (
-                  <div
-                    key={project.id}
-                    className="rounded-lg border p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium truncate">{project.project_name}</p>
-                      <Badge variant="outline" className="capitalize">
-                        {project.status?.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {project.capacity_kw && (
-                        <p>{project.capacity_kw} kW</p>
-                      )}
-                      {project.start_date && (
-                        <p>Started: {format(new Date(project.start_date), 'MMM d, yyyy')}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </Layout>
+    </AppLayout>
   );
 };
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,7 +84,7 @@ export default function TimeLogs() {
   };
 
   return (
-    <Layout title="Time Logs">
+    <AppLayout title="Time Logs">
       <div className="space-y-6">
         {/* Clock In/Out Card */}
         <Card className="border-primary/20">
@@ -250,6 +250,6 @@ export default function TimeLogs() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </AppLayout>
   );
 }
