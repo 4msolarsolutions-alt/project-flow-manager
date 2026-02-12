@@ -217,6 +217,12 @@ export default function SolarDesign3D({
     setBlockers((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
+  const updateBlockerPosition = useCallback((id: string, newPosition: [number, number, number]) => {
+    setBlockers((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, position: newPosition } : b))
+    );
+  }, []);
+
   if (roofPolygon.length < 3) {
     return (
       <Card className="p-8 text-center">
@@ -391,6 +397,7 @@ export default function SolarDesign3D({
                 size={b.size}
                 type={b.type}
                 onRemove={() => removeBlocker(b.id)}
+                onPositionChange={(pos) => updateBlockerPosition(b.id, pos)}
               />
             ))}
 
