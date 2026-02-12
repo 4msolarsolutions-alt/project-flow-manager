@@ -11,6 +11,7 @@ import WaitingForProject from "./pages/WaitingForProject";
 import Auth from "./pages/Auth";
 import Leads from "./pages/Leads";
 import Projects from "./pages/Projects";
+import SolarLayout from "./pages/SolarLayout";
 import Tasks from "./pages/Tasks";
 import SiteVisits from "./pages/SiteVisits";
 import TimeLogs from "./pages/TimeLogs";
@@ -28,6 +29,7 @@ import CustomerPayments from "./pages/customer/CustomerPayments";
 import CustomerWarranty from "./pages/customer/CustomerWarranty";
 import CustomerDocuments from "./pages/customer/CustomerDocuments";
 import CustomerSupport from "./pages/customer/CustomerSupport";
+import CustomerSolarView from "./pages/customer/CustomerSolarView";
 import { Loader2 } from "lucide-react";
 import { useCustomerProjects } from "./hooks/useCustomerProjects";
 
@@ -144,6 +146,7 @@ const AppRoutes = () => (
     <Route path="/customer/warranty" element={<CustomerRoute><CustomerWarranty /></CustomerRoute>} />
     <Route path="/customer/documents" element={<CustomerRoute><CustomerDocuments /></CustomerRoute>} />
     <Route path="/customer/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
+    <Route path="/customer/solar-layout" element={<CustomerRoute><CustomerSolarView /></CustomerRoute>} />
     <Route path="/waiting-for-project" element={<ProtectedRoute><WaitingForProject /></ProtectedRoute>} />
     
     {/* Staff/Admin Routes */}
@@ -151,6 +154,7 @@ const AppRoutes = () => (
     <Route path="/employee-dashboard" element={<StaffRoute><EmployeeDashboard /></StaffRoute>} />
     <Route path="/leads" element={<StaffRoute><Leads /></StaffRoute>} />
     <Route path="/projects" element={<StaffRoute><Projects /></StaffRoute>} />
+    <Route path="/solar-layout" element={<StaffRoute><SolarLayout /></StaffRoute>} />
     <Route path="/tasks" element={<StaffRoute><Tasks /></StaffRoute>} />
     <Route path="/site-visits" element={<StaffRoute><SiteVisits /></StaffRoute>} />
     <Route path="/time-logs" element={<StaffRoute><TimeLogs /></StaffRoute>} />
