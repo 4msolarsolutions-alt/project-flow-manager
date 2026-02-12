@@ -29,7 +29,7 @@ import CustomerPayments from "./pages/customer/CustomerPayments";
 import CustomerWarranty from "./pages/customer/CustomerWarranty";
 import CustomerDocuments from "./pages/customer/CustomerDocuments";
 import CustomerSupport from "./pages/customer/CustomerSupport";
-import CustomerSolarView from "./pages/customer/CustomerSolarView";
+
 import { Loader2 } from "lucide-react";
 import { useCustomerProjects } from "./hooks/useCustomerProjects";
 
@@ -146,7 +146,7 @@ const AppRoutes = () => (
     <Route path="/customer/warranty" element={<CustomerRoute><CustomerWarranty /></CustomerRoute>} />
     <Route path="/customer/documents" element={<CustomerRoute><CustomerDocuments /></CustomerRoute>} />
     <Route path="/customer/support" element={<CustomerRoute><CustomerSupport /></CustomerRoute>} />
-    <Route path="/customer/solar-layout" element={<CustomerRoute><CustomerSolarView /></CustomerRoute>} />
+    
     <Route path="/waiting-for-project" element={<ProtectedRoute><WaitingForProject /></ProtectedRoute>} />
     
     {/* Staff/Admin Routes */}

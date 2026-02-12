@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useProject } from "@/hooks/useProjects";
+import { useProject, useProjects } from "@/hooks/useProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -48,8 +48,13 @@ function metersToLngDeg(m: number, lat: number) { return m / (111320 * Math.cos(
 export default function SolarLayout() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const projectId = searchParams.get("project");
-  const { data: project, isLoading: projectLoading } = useProject(projectId || undefined);
+  const projectIdParam = searchParams.get("project");
+  const leadIdParam = searchParams.get("lead");
+  const { projects } = useProjects();
+
+  // Resolve project: either directly via project param, or find project by lead_id
+  const resolvedProjectId = projectIdParam || (leadIdParam && projects?.find(p => p.lead_id === leadIdParam)?.id) || undefined;
+  const { data: project, isLoading: projectLoading } = useProject(resolvedProjectId);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -148,7 +153,7 @@ export default function SolarLayout() {
   );
 
   const handleSave = async () => {
-    if (!projectId) return;
+    if (!resolvedProjectId) return;
     setSaving(true);
     try {
       const layoutData: SolarLayoutData = {
@@ -162,10 +167,10 @@ export default function SolarLayout() {
       const { error } = await supabase
         .from("projects")
         .update({ solar_layout: layoutData as any })
-        .eq("id", projectId);
+        .eq("id", resolvedProjectId);
 
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects", resolvedProjectId] });
       toast({ title: "Layout Saved", description: "Solar layout has been saved successfully." });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
