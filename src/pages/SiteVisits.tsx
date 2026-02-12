@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, MapPin, User, Building, CheckCircle2, Clock, Plus, Loader2 } from "lucide-react";
+import { Calendar, MapPin, User, Building, CheckCircle2, Clock, Plus, Loader2, Sun } from "lucide-react";
 import { useSiteVisits } from "@/hooks/useSiteVisits";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +16,7 @@ const SiteVisits = () => {
   const { siteVisits, isLoading, createSiteVisit } = useSiteVisits();
   const { leads } = useLeads();
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -243,40 +245,52 @@ const SiteVisits = () => {
           <div className="rounded-xl bg-card border border-border overflow-hidden">
             <table className="data-table">
               <thead>
-                <tr>
-                  <th>Lead</th>
-                  <th>Location</th>
-                  <th>Building Type</th>
-                  <th>Roof Area</th>
-                  <th>Recommended</th>
-                  <th>Completed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completed.map((visit: any) => (
-                  <tr key={visit.id}>
-                    <td className="font-medium text-foreground">
-                      {visit.leads?.customer_name || 'Unknown'}
-                    </td>
-                    <td className="text-muted-foreground">
-                      {visit.leads?.address?.substring(0, 30) || 'No address'}
-                    </td>
-                    <td className="capitalize">
-                      {visit.building_type?.replace('_', ' ') || '-'}
-                    </td>
-                    <td>{visit.roof_area ? `${visit.roof_area} sq.m` : '-'}</td>
-                    <td className="font-medium">
-                      {visit.recommended_capacity ? `${visit.recommended_capacity} KW` : '-'}
-                    </td>
-                    <td>
-                      <span className="flex items-center gap-1 text-success">
-                        <CheckCircle2 className="h-4 w-4" />
-                        {visit.completed_at ? formatDate(visit.completed_at) : '-'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                 <tr>
+                   <th>Lead</th>
+                   <th>Location</th>
+                   <th>Building Type</th>
+                   <th>Roof Area</th>
+                   <th>Recommended</th>
+                   <th>Completed</th>
+                   <th>Actions</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {completed.map((visit: any) => (
+                   <tr key={visit.id}>
+                     <td className="font-medium text-foreground">
+                       {visit.leads?.customer_name || 'Unknown'}
+                     </td>
+                     <td className="text-muted-foreground">
+                       {visit.leads?.address?.substring(0, 30) || 'No address'}
+                     </td>
+                     <td className="capitalize">
+                       {visit.building_type?.replace('_', ' ') || '-'}
+                     </td>
+                     <td>{visit.roof_area ? `${visit.roof_area} sq.m` : '-'}</td>
+                     <td className="font-medium">
+                       {visit.recommended_capacity ? `${visit.recommended_capacity} KW` : '-'}
+                     </td>
+                     <td>
+                       <span className="flex items-center gap-1 text-success">
+                         <CheckCircle2 className="h-4 w-4" />
+                         {visit.completed_at ? formatDate(visit.completed_at) : '-'}
+                       </span>
+                     </td>
+                     <td>
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         className="gap-1"
+                         onClick={() => navigate(`/solar-layout?lead=${visit.lead_id}`)}
+                       >
+                         <Sun className="h-4 w-4" />
+                         Design Layout
+                       </Button>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
             </table>
           </div>
         )}
