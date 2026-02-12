@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN solar_layout jsonb DEFAULT NULL;
