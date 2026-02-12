@@ -11,7 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker } from "@react-google-maps/api";
-import { Loader2, Save, Trash2, Sun, Zap, Battery, BarChart3, ArrowLeft, RotateCw, Ruler, MousePointer, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, Trash2, Sun, Zap, Battery, BarChart3, ArrowLeft, RotateCw, Ruler, MousePointer, CheckCircle2, FileText } from "lucide-react";
+import { useQuotations } from "@/hooks/useQuotations";
+import { useLeads } from "@/hooks/useLeads";
+import { useAuth } from "@/hooks/useAuth";
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
 const LIBRARIES: ("geometry")[] = ["geometry"];
@@ -64,7 +67,11 @@ export default function SolarLayout() {
 
   const [roofPath, setRoofPath] = useState<google.maps.LatLngLiteral[]>([]);
   const [panels, setPanels] = useState<{ north: number; south: number; east: number; west: number }[]>([]);
+  const { createQuotation } = useQuotations();
+  const { updateLead } = useLeads();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [generatingQuote, setGeneratingQuote] = useState(false);
   const [orientation, setOrientation] = useState<PanelOrientation>("landscape");
   const [tiltAngle, setTiltAngle] = useState(15);
   const [selectedPanelIdx, setSelectedPanelIdx] = useState(0);
@@ -202,6 +209,62 @@ export default function SolarLayout() {
     }
   };
 
+  const handleGenerateQuote = async () => {
+    if (!leadIdParam && !project?.lead_id) {
+      toast({ title: "No lead linked", description: "This project has no associated lead for creating a quotation.", variant: "destructive" });
+      return;
+    }
+    if (panelCount === 0) {
+      toast({ title: "No panels", description: "Draw a roof and fit panels before generating a quote.", variant: "destructive" });
+      return;
+    }
+
+    const resolvedLeadId = leadIdParam || project?.lead_id;
+    if (!resolvedLeadId) return;
+
+    setGeneratingQuote(true);
+    try {
+      const bomItems = [
+        { sno: 1, material: "Solar Module", make: "", description: `${selectedPanel.watt}W Panel`, quantity: panelCount, unit: "Nos", cost: 0 },
+        { sno: 2, material: "Inverter", make: "", description: inverterSuggestion, quantity: Math.ceil(capacityKW / 10) || 1, unit: "Nos", cost: 0 },
+        { sno: 3, material: "Monitoring System", make: "", description: "Data Monitoring", quantity: 1, unit: "Nos", cost: 0 },
+        { sno: 4, material: "Module Mounting Structure", make: "", description: `For ${capacityKW.toFixed(2)} kW system`, quantity: Math.ceil(capacityKW), unit: "Kw", cost: 0 },
+        { sno: 5, material: "DCDB", make: "", description: "", quantity: 1, unit: "Nos", cost: 0 },
+        { sno: 6, material: "AC Combiner Box", make: "", description: "", quantity: 1, unit: "Nos", cost: 0 },
+        { sno: 7, material: "DC Cable", make: "Polycab", description: "4 SQ.MM -FRLS,1000vdc-", quantity: 0, unit: "Mtr", cost: 0 },
+        { sno: 8, material: "AC Cable", make: "Orbit/Polycab", description: "", quantity: 0, unit: "Mtr", cost: 0 },
+        { sno: 9, material: "Earth Rod", make: "", description: "1m Copper bonded with chemical bag", quantity: 2, unit: "Nos", cost: 0 },
+        { sno: 10, material: "Lighting Arrester", make: "", description: "Conventional", quantity: 1, unit: "Nos", cost: 0 },
+        { sno: 11, material: "Installation Cost", make: "", description: "", quantity: Math.ceil(capacityKW), unit: "Kw", cost: 0 },
+      ];
+
+      const result = await createQuotation.mutateAsync({
+        lead_id: resolvedLeadId,
+        system_kw: capacityKW,
+        bom: bomItems,
+        subtotal: 0,
+        gst_amount: 0,
+        total_amount: 0,
+        validity_days: 15,
+        terms_conditions: `1. Quotation valid for 15 days from the date of issue.\n2. 60% advance payment with Purchase Order.\n3. 30% upon material delivery.\n4. 10% on completion of installation after commissioning.\n5. GST @9% applicable on supply and installation.\n6. Net metering application charges extra (if applicable).\n7. Civil work included as per site requirements.`,
+        prepared_by: user?.id,
+        status: 'draft',
+      });
+
+      await updateLead.mutateAsync({
+        id: resolvedLeadId,
+        status: 'quotation_prepared',
+      });
+
+      toast({ title: "Quotation Created", description: `Draft quotation generated for ${capacityKW.toFixed(2)} kW system with ${panelCount} panels.` });
+      navigate(`/quotations/${result.id}`);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setGeneratingQuote(false);
+    }
+  };
+
   const handleClear = () => {
     setRoofPath([]);
     setPanels([]);
@@ -269,6 +332,10 @@ export default function SolarLayout() {
           <Button size="sm" onClick={handleSave} disabled={saving || panels.length === 0}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Layout
+          </Button>
+          <Button size="sm" variant="secondary" onClick={handleGenerateQuote} disabled={generatingQuote || panels.length === 0}>
+            {generatingQuote ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+            Generate Quote
           </Button>
         </div>
       </div>
