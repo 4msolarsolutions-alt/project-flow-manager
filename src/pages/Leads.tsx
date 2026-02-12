@@ -24,7 +24,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Filter, MoreHorizontal, Phone, MapPin, Calendar, Loader2, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Phone, MapPin, Calendar, Loader2, Trash2, Sun } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +73,7 @@ const formatStatus = (status: string) => {
 };
 
 const Leads = () => {
+  const navigate = useNavigate();
   const { leads, isLoading, createLead, updateLead, deleteLead } = useLeads();
   const { createSiteVisit } = useSiteVisits();
   const { createProject } = useProjects();
@@ -462,6 +464,10 @@ const Leads = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openConvertDialog(lead)}>
                             Convert to Project
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/solar-layout?lead=${lead.id}`)}>
+                            <Sun className="h-4 w-4 mr-2" />
+                            Design Layout
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
