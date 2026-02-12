@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -6,15 +6,18 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProject, useProjects } from "@/hooks/useProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker } from "@react-google-maps/api";
-import { Loader2, Save, Trash2, Sun, Zap, Battery, BarChart3, ArrowLeft, RotateCw, Ruler, MousePointer, CheckCircle2, FileText } from "lucide-react";
+import { Loader2, Save, Trash2, Sun, Zap, Battery, BarChart3, ArrowLeft, RotateCw, Ruler, MousePointer, CheckCircle2, FileText, Map, Box } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
+
+const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
 const LIBRARIES: ("geometry")[] = ["geometry"];
@@ -77,6 +80,7 @@ export default function SolarLayout() {
   const [selectedPanelIdx, setSelectedPanelIdx] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawPoints, setDrawPoints] = useState<google.maps.LatLngLiteral[]>([]);
+  const [activeTab, setActiveTab] = useState("2d");
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const selectedPanel = PANEL_OPTIONS[selectedPanelIdx];
@@ -314,21 +318,25 @@ export default function SolarLayout() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <div className="ml-auto flex flex-wrap gap-2">
-          {!isDrawing ? (
-            <Button variant="outline" size="sm" onClick={startDrawing}>
-              <MousePointer className="mr-2 h-4 w-4" /> Draw Roof
-            </Button>
-          ) : (
+          {activeTab === "2d" && (
             <>
-              <Button size="sm" variant="default" onClick={finishDrawing} disabled={drawPoints.length < 3}>
-                <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Drawing ({drawPoints.length} pts)
+              {!isDrawing ? (
+                <Button variant="outline" size="sm" onClick={startDrawing}>
+                  <MousePointer className="mr-2 h-4 w-4" /> Draw Roof
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" variant="default" onClick={finishDrawing} disabled={drawPoints.length < 3}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Drawing ({drawPoints.length} pts)
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={cancelDrawing}>Cancel</Button>
+                </>
+              )}
+              <Button variant="outline" size="sm" onClick={handleClear}>
+                <Trash2 className="mr-2 h-4 w-4" /> Clear
               </Button>
-              <Button variant="outline" size="sm" onClick={cancelDrawing}>Cancel</Button>
             </>
           )}
-          <Button variant="outline" size="sm" onClick={handleClear}>
-            <Trash2 className="mr-2 h-4 w-4" /> Clear
-          </Button>
           <Button size="sm" onClick={handleSave} disabled={saving || panels.length === 0}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Layout
@@ -395,109 +403,149 @@ export default function SolarLayout() {
         </div>
       </Card>
 
-      {/* Drawing instructions */}
-      {isDrawing && (
-        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-700 dark:text-amber-300">
-          🖱️ <strong>Click on the rooftop</strong> to place corner points. Place at least 3 points to form the roof outline, then click <strong>"Finish Drawing"</strong>.
-        </div>
-      )}
+      {/* Tabs: 2D Satellite / 3D Design */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="2d" className="flex items-center gap-2">
+            <Map className="h-4 w-4" /> 2D Satellite
+          </TabsTrigger>
+          <TabsTrigger value="3d" className="flex items-center gap-2">
+            <Box className="h-4 w-4" /> 3D Design Engine
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Map */}
-      <Card className="overflow-hidden mb-6">
-        {!isLoaded ? (
-          <div className="flex items-center justify-center h-[500px]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <TabsContent value="2d" className="mt-4">
+          {/* Drawing instructions */}
+          {isDrawing && (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+              🖱️ <strong>Click on the rooftop</strong> to place corner points. Place at least 3 points to form the roof outline, then click <strong>"Finish Drawing"</strong>.
+            </div>
+          )}
+
+          {/* Map */}
+          <Card className="overflow-hidden mb-6">
+            {!isLoaded ? (
+              <div className="flex items-center justify-center h-[500px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={roofPath.length > 0 ? roofPath[0] : defaultCenter}
+                zoom={20}
+                mapTypeId="satellite"
+                onLoad={onMapLoad}
+                onClick={handleMapClick}
+                options={{
+                  draggableCursor: isDrawing ? "crosshair" : undefined,
+                }}
+              >
+                {/* Drawing points preview */}
+                {drawPoints.map((pt, i) => (
+                  <Marker key={`draw-${i}`} position={pt} icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 6,
+                    fillColor: "#f44336",
+                    fillOpacity: 1,
+                    strokeColor: "#fff",
+                    strokeWeight: 2,
+                  }} />
+                ))}
+                {drawPoints.length >= 2 && (
+                  <Polygon
+                    paths={drawPoints}
+                    options={{
+                      fillColor: "#ffeb3b",
+                      fillOpacity: 0.2,
+                      strokeColor: "#f44336",
+                      strokeWeight: 2,
+                      strokeOpacity: 0.8,
+                    }}
+                  />
+                )}
+
+                {/* Saved roof polygon */}
+                {roofPath.length > 0 && !isDrawing && (
+                  <Polygon
+                    paths={roofPath}
+                    options={{
+                      fillColor: "#ffeb3b",
+                      fillOpacity: 0.2,
+                      strokeColor: "#f44336",
+                      strokeWeight: 2,
+                    }}
+                  />
+                )}
+
+                {/* Panels */}
+                {panels.map((panel, i) => (
+                  <Rectangle
+                    key={i}
+                    bounds={panel}
+                    options={{
+                      fillColor: "#1e90ff",
+                      fillOpacity: 0.6,
+                      strokeColor: "#0d47a1",
+                      strokeWeight: 1,
+                    }}
+                  />
+                ))}
+              </GoogleMap>
+            )}
+          </Card>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 flex flex-col items-center gap-2">
+              <Sun className="h-6 w-6 text-amber-500" />
+              <span className="text-2xl font-bold">{panelCount}</span>
+              <span className="text-xs text-muted-foreground">Panels ({selectedPanel.watt}W each)</span>
+            </Card>
+            <Card className="p-4 flex flex-col items-center gap-2">
+              <Zap className="h-6 w-6 text-primary" />
+              <span className="text-2xl font-bold">{capacityKW.toFixed(2)}</span>
+              <span className="text-xs text-muted-foreground">Capacity (kW)</span>
+            </Card>
+            <Card className="p-4 flex flex-col items-center gap-2">
+              <Battery className="h-6 w-6 text-green-500" />
+              <span className="text-2xl font-bold text-center text-sm">{inverterSuggestion}</span>
+              <span className="text-xs text-muted-foreground">Inverter</span>
+            </Card>
+            <Card className="p-4 flex flex-col items-center gap-2">
+              <BarChart3 className="h-6 w-6 text-blue-500" />
+              <span className="text-2xl font-bold">{dailyEnergy.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">Daily kWh ({tiltAngle}° tilt)</span>
+              <span className="text-xs text-muted-foreground">{annualEnergy.toFixed(0)} kWh/year</span>
+            </Card>
           </div>
-        ) : (
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={roofPath.length > 0 ? roofPath[0] : defaultCenter}
-            zoom={20}
-            mapTypeId="satellite"
-            onLoad={onMapLoad}
-            onClick={handleMapClick}
-            options={{
-              draggableCursor: isDrawing ? "crosshair" : undefined,
-            }}
-          >
-            {/* Drawing points preview */}
-            {drawPoints.map((pt, i) => (
-              <Marker key={`draw-${i}`} position={pt} icon={{
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 6,
-                fillColor: "#f44336",
-                fillOpacity: 1,
-                strokeColor: "#fff",
-                strokeWeight: 2,
-              }} />
-            ))}
-            {drawPoints.length >= 2 && (
-              <Polygon
-                paths={drawPoints}
-                options={{
-                  fillColor: "#ffeb3b",
-                  fillOpacity: 0.2,
-                  strokeColor: "#f44336",
-                  strokeWeight: 2,
-                  strokeOpacity: 0.8,
-                }}
-              />
-            )}
+        </TabsContent>
 
-            {/* Saved roof polygon */}
-            {roofPath.length > 0 && !isDrawing && (
-              <Polygon
-                paths={roofPath}
-                options={{
-                  fillColor: "#ffeb3b",
-                  fillOpacity: 0.2,
-                  strokeColor: "#f44336",
-                  strokeWeight: 2,
-                }}
-              />
-            )}
-
-            {/* Panels */}
-            {panels.map((panel, i) => (
-              <Rectangle
-                key={i}
-                bounds={panel}
-                options={{
-                  fillColor: "#1e90ff",
-                  fillOpacity: 0.6,
-                  strokeColor: "#0d47a1",
-                  strokeWeight: 1,
-                }}
-              />
-            ))}
-          </GoogleMap>
-        )}
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 flex flex-col items-center gap-2">
-          <Sun className="h-6 w-6 text-amber-500" />
-          <span className="text-2xl font-bold">{panelCount}</span>
-          <span className="text-xs text-muted-foreground">Panels ({selectedPanel.watt}W each)</span>
-        </Card>
-        <Card className="p-4 flex flex-col items-center gap-2">
-          <Zap className="h-6 w-6 text-primary" />
-          <span className="text-2xl font-bold">{capacityKW.toFixed(2)}</span>
-          <span className="text-xs text-muted-foreground">Capacity (kW)</span>
-        </Card>
-        <Card className="p-4 flex flex-col items-center gap-2">
-          <Battery className="h-6 w-6 text-green-500" />
-          <span className="text-2xl font-bold text-center text-sm">{inverterSuggestion}</span>
-          <span className="text-xs text-muted-foreground">Inverter</span>
-        </Card>
-        <Card className="p-4 flex flex-col items-center gap-2">
-          <BarChart3 className="h-6 w-6 text-blue-500" />
-          <span className="text-2xl font-bold">{dailyEnergy.toFixed(1)}</span>
-          <span className="text-xs text-muted-foreground">Daily kWh ({tiltAngle}° tilt)</span>
-          <span className="text-xs text-muted-foreground">{annualEnergy.toFixed(0)} kWh/year</span>
-        </Card>
-      </div>
+        <TabsContent value="3d" className="mt-4">
+          <Suspense fallback={
+            <Card className="flex items-center justify-center h-[500px]">
+              <div className="text-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                <p className="text-sm text-muted-foreground">Loading 3D Engine...</p>
+              </div>
+            </Card>
+          }>
+            <SolarDesign3D
+              roofPolygon={roofPath}
+              panelCount={panelCount}
+              capacityKW={capacityKW}
+              dailyEnergy={dailyEnergy}
+              annualEnergy={annualEnergy}
+              inverterSuggestion={inverterSuggestion}
+              tiltAngle={tiltAngle}
+              orientation={orientation}
+              panelWatt={selectedPanel.watt}
+              panelLength={selectedPanel.length}
+              panelWidth={selectedPanel.width}
+              latitude={roofPath.length > 0 ? roofPath[0].lat : 13.08}
+            />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </AppLayout>
   );
 }
