@@ -18,6 +18,7 @@ import {
   Package,
   Headphones,
   FileBarChart,
+  Sun,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ const employeeNavItems = [
 const customerNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/customer-dashboard" },
   { icon: FolderKanban, label: "My Project", path: "/customer/project" },
+  { icon: Sun, label: "Solar Layout", path: "/customer/solar-view" },
   { icon: Wallet, label: "Payments", path: "/customer/payments" },
   { icon: FileCheck, label: "Warranty", path: "/customer/warranty" },
   { icon: FileText, label: "Documents", path: "/customer/documents" },
