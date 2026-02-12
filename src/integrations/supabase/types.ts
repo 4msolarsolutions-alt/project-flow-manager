@@ -682,6 +682,7 @@ export type Database = {
           pm_id: string | null
           project_name: string
           project_type: Database["public"]["Enums"]["project_type"]
+          solar_layout: Json | null
           start_date: string | null
           status: string | null
           total_amount: number | null
@@ -698,6 +699,7 @@ export type Database = {
           pm_id?: string | null
           project_name: string
           project_type?: Database["public"]["Enums"]["project_type"]
+          solar_layout?: Json | null
           start_date?: string | null
           status?: string | null
           total_amount?: number | null
@@ -714,6 +716,7 @@ export type Database = {
           pm_id?: string | null
           project_name?: string
           project_type?: Database["public"]["Enums"]["project_type"]
+          solar_layout?: Json | null
           start_date?: string | null
           status?: string | null
           total_amount?: number | null
