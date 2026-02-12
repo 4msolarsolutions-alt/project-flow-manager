@@ -10,16 +10,21 @@ import { useProject, useProjects } from "@/hooks/useProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { GoogleMap, useJsApiLoader, DrawingManager, Polygon, Rectangle } from "@react-google-maps/api";
-import { Loader2, Save, Trash2, Sun, Zap, Battery, BarChart3, ArrowLeft, RotateCw, Ruler } from "lucide-react";
+import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker } from "@react-google-maps/api";
+import { Loader2, Save, Trash2, Sun, Zap, Battery, BarChart3, ArrowLeft, RotateCw, Ruler, MousePointer, CheckCircle2 } from "lucide-react";
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyB6enoBp3iI2JYmI0pcu3QQfAh5CYKe3ro";
-const PANEL_WATT = 550;
-const LIBRARIES: ("drawing" | "geometry")[] = ["drawing", "geometry"];
+const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
+const LIBRARIES: ("geometry")[] = ["geometry"];
 
-// Panel physical dimensions in meters
-const PANEL_LENGTH_M = 2.278; // ~2.3m
-const PANEL_WIDTH_M = 1.134;  // ~1.1m
+// Panel options
+const PANEL_OPTIONS = [
+  { label: "550W Panel (2.278m × 1.134m)", watt: 550, length: 2.278, width: 1.134 },
+  { label: "540W Panel (2.278m × 1.134m)", watt: 540, length: 2.278, width: 1.134 },
+  { label: "500W Panel (2.187m × 1.102m)", watt: 500, length: 2.187, width: 1.102 },
+  { label: "450W Panel (2.094m × 1.038m)", watt: 450, length: 2.094, width: 1.038 },
+  { label: "400W Panel (1.956m × 1.002m)", watt: 400, length: 1.956, width: 1.002 },
+  { label: "335W Panel (1.690m × 0.996m)", watt: 335, length: 1.690, width: 0.996 },
+];
 
 const mapContainerStyle = { width: "100%", height: "500px", borderRadius: "12px" };
 const defaultCenter = { lat: 13.0827, lng: 80.2707 };
@@ -33,6 +38,7 @@ interface SolarLayoutData {
   capacityKW: number;
   orientation?: PanelOrientation;
   tiltAngle?: number;
+  panelWatt?: number;
 }
 
 function getInverterSuggestion(capacityKW: number): string {
@@ -41,7 +47,6 @@ function getInverterSuggestion(capacityKW: number): string {
   return `Multiple 10kW Inverters (${Math.ceil(capacityKW / 10)}x)`;
 }
 
-// Convert meters to approximate lat/lng degrees (rough, near equator ~111,320 m/deg)
 function metersToLatDeg(m: number) { return m / 111320; }
 function metersToLngDeg(m: number, lat: number) { return m / (111320 * Math.cos((lat * Math.PI) / 180)); }
 
@@ -52,7 +57,6 @@ export default function SolarLayout() {
   const leadIdParam = searchParams.get("lead");
   const { projects } = useProjects();
 
-  // Resolve project: either directly via project param, or find project by lead_id
   const resolvedProjectId = projectIdParam || (leadIdParam && projects?.find(p => p.lead_id === leadIdParam)?.id) || undefined;
   const { data: project, isLoading: projectLoading } = useProject(resolvedProjectId);
   const { toast } = useToast();
@@ -63,8 +67,12 @@ export default function SolarLayout() {
   const [saving, setSaving] = useState(false);
   const [orientation, setOrientation] = useState<PanelOrientation>("landscape");
   const [tiltAngle, setTiltAngle] = useState(15);
+  const [selectedPanelIdx, setSelectedPanelIdx] = useState(0);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawPoints, setDrawPoints] = useState<google.maps.LatLngLiteral[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const polygonRef = useRef<google.maps.Polygon | null>(null);
+
+  const selectedPanel = PANEL_OPTIONS[selectedPanelIdx];
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
@@ -72,9 +80,8 @@ export default function SolarLayout() {
   });
 
   const panelCount = panels.length;
-  const capacityKW = (panelCount * PANEL_WATT) / 1000;
-  // Tilt affects effective irradiance — simple cos adjustment
-  const tiltFactor = Math.cos(((tiltAngle - 15) * Math.PI) / 180); // optimal ~15° for south India
+  const capacityKW = (panelCount * selectedPanel.watt) / 1000;
+  const tiltFactor = Math.cos(((tiltAngle - 15) * Math.PI) / 180);
   const dailyEnergy = capacityKW * 5.5 * 0.75 * Math.max(tiltFactor, 0.7);
   const annualEnergy = dailyEnergy * 365;
   const inverterSuggestion = getInverterSuggestion(capacityKW);
@@ -87,10 +94,14 @@ export default function SolarLayout() {
       if (layout.panels) setPanels(layout.panels);
       if (layout.orientation) setOrientation(layout.orientation);
       if (layout.tiltAngle !== undefined) setTiltAngle(layout.tiltAngle);
+      if (layout.panelWatt) {
+        const idx = PANEL_OPTIONS.findIndex(p => p.watt === layout.panelWatt);
+        if (idx >= 0) setSelectedPanelIdx(idx);
+      }
     }
   }, [project]);
 
-  const autoFitPanels = useCallback((path: google.maps.LatLngLiteral[], orient: PanelOrientation) => {
+  const autoFitPanels = useCallback((path: google.maps.LatLngLiteral[], orient: PanelOrientation, panel: typeof PANEL_OPTIONS[0]) => {
     if (path.length < 3) return;
 
     const bounds = new google.maps.LatLngBounds();
@@ -100,11 +111,10 @@ export default function SolarLayout() {
     const sw = bounds.getSouthWest();
     const centerLat = (ne.lat() + sw.lat()) / 2;
 
-    // Panel dimensions based on orientation
-    const panelH = orient === "landscape" ? PANEL_WIDTH_M : PANEL_LENGTH_M;
-    const panelW = orient === "landscape" ? PANEL_LENGTH_M : PANEL_WIDTH_M;
+    const panelH = orient === "landscape" ? panel.width : panel.length;
+    const panelW = orient === "landscape" ? panel.length : panel.width;
 
-    const panelLatSize = metersToLatDeg(panelH + 0.1); // 10cm gap
+    const panelLatSize = metersToLatDeg(panelH + 0.1);
     const panelLngSize = metersToLngDeg(panelW + 0.1, centerLat);
 
     const newPanels: { north: number; south: number; east: number; west: number }[] = [];
@@ -127,30 +137,42 @@ export default function SolarLayout() {
     setPanels(newPanels);
   }, []);
 
-  // Re-fit panels when orientation changes and we have a roof
+  // Re-fit when orientation or panel type changes
   useEffect(() => {
     if (roofPath.length >= 3) {
-      autoFitPanels(roofPath, orientation);
+      autoFitPanels(roofPath, orientation, selectedPanel);
     }
-  }, [orientation, autoFitPanels, roofPath]);
+  }, [orientation, selectedPanelIdx, autoFitPanels, roofPath, selectedPanel]);
 
-  const onPolygonComplete = useCallback(
-    (polygon: google.maps.Polygon) => {
-      if (polygonRef.current) {
-        polygonRef.current.setMap(null);
-      }
-      polygonRef.current = polygon;
+  // Click-to-draw: handle map click
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (!isDrawing || !e.latLng) return;
+    setDrawPoints(prev => [...prev, { lat: e.latLng!.lat(), lng: e.latLng!.lng() }]);
+  }, [isDrawing]);
 
-      const path = polygon
-        .getPath()
-        .getArray()
-        .map((p) => ({ lat: p.lat(), lng: p.lng() }));
-      setRoofPath(path);
-      autoFitPanels(path, orientation);
-      polygon.setVisible(false);
-    },
-    [autoFitPanels, orientation]
-  );
+  const startDrawing = () => {
+    setIsDrawing(true);
+    setDrawPoints([]);
+    setRoofPath([]);
+    setPanels([]);
+    toast({ title: "Drawing Mode", description: "Click on the map to place roof corner points. Click 'Finish Drawing' when done." });
+  };
+
+  const finishDrawing = () => {
+    if (drawPoints.length < 3) {
+      toast({ title: "Need at least 3 points", variant: "destructive" });
+      return;
+    }
+    setIsDrawing(false);
+    setRoofPath(drawPoints);
+    autoFitPanels(drawPoints, orientation, selectedPanel);
+    setDrawPoints([]);
+  };
+
+  const cancelDrawing = () => {
+    setIsDrawing(false);
+    setDrawPoints([]);
+  };
 
   const handleSave = async () => {
     if (!resolvedProjectId) return;
@@ -163,6 +185,7 @@ export default function SolarLayout() {
         capacityKW,
         orientation,
         tiltAngle,
+        panelWatt: selectedPanel.watt,
       };
       const { error } = await supabase
         .from("projects")
@@ -180,12 +203,10 @@ export default function SolarLayout() {
   };
 
   const handleClear = () => {
-    if (polygonRef.current) {
-      polygonRef.current.setMap(null);
-      polygonRef.current = null;
-    }
     setRoofPath([]);
     setPanels([]);
+    setDrawPoints([]);
+    setIsDrawing(false);
   };
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -214,9 +235,9 @@ export default function SolarLayout() {
     return (
       <AppLayout title="Solar Layout">
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Project not found.</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/projects")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
+          <p className="text-muted-foreground">Project not found. Please ensure a project exists for this lead first.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
           </Button>
         </div>
       </AppLayout>
@@ -225,11 +246,23 @@ export default function SolarLayout() {
 
   return (
     <AppLayout title={`Solar Layout — ${project.project_name}`}>
-      <div className="mb-4 flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => navigate("/projects")}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Projects
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
+          {!isDrawing ? (
+            <Button variant="outline" size="sm" onClick={startDrawing}>
+              <MousePointer className="mr-2 h-4 w-4" /> Draw Roof
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="default" onClick={finishDrawing} disabled={drawPoints.length < 3}>
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Finish Drawing ({drawPoints.length} pts)
+              </Button>
+              <Button variant="outline" size="sm" onClick={cancelDrawing}>Cancel</Button>
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={handleClear}>
             <Trash2 className="mr-2 h-4 w-4" /> Clear
           </Button>
@@ -243,24 +276,35 @@ export default function SolarLayout() {
       {/* Panel Settings */}
       <Card className="p-4 mb-4">
         <div className="flex flex-col sm:flex-row gap-6">
+          <div className="flex flex-col gap-2 min-w-[220px]">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <Sun className="h-4 w-4" /> Panel Type
+            </Label>
+            <Select value={String(selectedPanelIdx)} onValueChange={(v) => setSelectedPanelIdx(Number(v))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PANEL_OPTIONS.map((p, i) => (
+                  <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex flex-col gap-2 min-w-[180px]">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <RotateCw className="h-4 w-4" /> Panel Orientation
+              <RotateCw className="h-4 w-4" /> Orientation
             </Label>
             <Select value={orientation} onValueChange={(v) => setOrientation(v as PanelOrientation)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="landscape">Landscape (horizontal)</SelectItem>
-                <SelectItem value="portrait">Portrait (vertical)</SelectItem>
+                <SelectItem value="landscape">Landscape</SelectItem>
+                <SelectItem value="portrait">Portrait</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-xs text-muted-foreground">
-              {orientation === "landscape"
-                ? `${PANEL_LENGTH_M}m × ${PANEL_WIDTH_M}m`
-                : `${PANEL_WIDTH_M}m × ${PANEL_LENGTH_M}m`}
-            </span>
           </div>
 
           <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
@@ -284,6 +328,13 @@ export default function SolarLayout() {
         </div>
       </Card>
 
+      {/* Drawing instructions */}
+      {isDrawing && (
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-700 dark:text-amber-300">
+          🖱️ <strong>Click on the rooftop</strong> to place corner points. Place at least 3 points to form the roof outline, then click <strong>"Finish Drawing"</strong>.
+        </div>
+      )}
+
       {/* Map */}
       <Card className="overflow-hidden mb-6">
         {!isLoaded ? (
@@ -297,26 +348,37 @@ export default function SolarLayout() {
             zoom={20}
             mapTypeId="satellite"
             onLoad={onMapLoad}
+            onClick={handleMapClick}
+            options={{
+              draggableCursor: isDrawing ? "crosshair" : undefined,
+            }}
           >
-            <DrawingManager
-              onPolygonComplete={onPolygonComplete}
-              options={{
-                drawingMode: google.maps.drawing.OverlayType.POLYGON as any,
-                drawingControl: true,
-                drawingControlOptions: {
-                  drawingModes: [google.maps.drawing.OverlayType.POLYGON as any],
-                },
-                polygonOptions: {
+            {/* Drawing points preview */}
+            {drawPoints.map((pt, i) => (
+              <Marker key={`draw-${i}`} position={pt} icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 6,
+                fillColor: "#f44336",
+                fillOpacity: 1,
+                strokeColor: "#fff",
+                strokeWeight: 2,
+              }} />
+            ))}
+            {drawPoints.length >= 2 && (
+              <Polygon
+                paths={drawPoints}
+                options={{
                   fillColor: "#ffeb3b",
-                  fillOpacity: 0.3,
+                  fillOpacity: 0.2,
                   strokeColor: "#f44336",
                   strokeWeight: 2,
-                  editable: true,
-                },
-              }}
-            />
+                  strokeOpacity: 0.8,
+                }}
+              />
+            )}
 
-            {roofPath.length > 0 && (
+            {/* Saved roof polygon */}
+            {roofPath.length > 0 && !isDrawing && (
               <Polygon
                 paths={roofPath}
                 options={{
@@ -328,6 +390,7 @@ export default function SolarLayout() {
               />
             )}
 
+            {/* Panels */}
             {panels.map((panel, i) => (
               <Rectangle
                 key={i}
@@ -349,7 +412,7 @@ export default function SolarLayout() {
         <Card className="p-4 flex flex-col items-center gap-2">
           <Sun className="h-6 w-6 text-amber-500" />
           <span className="text-2xl font-bold">{panelCount}</span>
-          <span className="text-xs text-muted-foreground">Panels ({PANEL_WATT}W each)</span>
+          <span className="text-xs text-muted-foreground">Panels ({selectedPanel.watt}W each)</span>
         </Card>
         <Card className="p-4 flex flex-col items-center gap-2">
           <Zap className="h-6 w-6 text-primary" />
