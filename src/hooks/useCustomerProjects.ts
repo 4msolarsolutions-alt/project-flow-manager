@@ -15,6 +15,7 @@ export interface CustomerProject {
   total_amount: number | null;
   notes: string | null;
   created_at: string | null;
+  solar_layout: any;
   leads: {
     customer_name: string;
     phone: string;

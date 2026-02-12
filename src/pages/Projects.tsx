@@ -25,7 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Calendar, User, Zap, Loader2, Eye, Edit2, FileText, ClipboardList, Trash2 } from "lucide-react";
+import { Plus, MoreHorizontal, Calendar, User, Zap, Loader2, Eye, Edit2, FileText, ClipboardList, Trash2, Sun } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -307,6 +307,13 @@ const Projects = () => {
                     >
                       <ClipboardList className="h-4 w-4" />
                       View Tasks
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={() => navigate(`/solar-layout?project=${project.id}`)}
+                    >
+                      <Sun className="h-4 w-4" />
+                      Solar Layout
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="gap-2"
