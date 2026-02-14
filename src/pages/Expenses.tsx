@@ -30,7 +30,7 @@ const EXPENSE_TYPES = [
 ];
 
 export default function Expenses() {
-  const { expenses, totals, isLoading, createExpense } = useExpenses();
+  const { expenses, totals, isLoading, createExpense, updateExpense } = useExpenses();
   const { projects } = useProjects();
   const { leads } = useLeads();
   const { user, isAdmin, hasRole } = useAuth();
@@ -55,6 +55,8 @@ export default function Expenses() {
   // For admin verification
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const canApprove = isAdmin() || hasRole('accounts');
 
@@ -542,17 +544,31 @@ export default function Expenses() {
                         {canApprove && (
                           <TableCell>
                             {expense.status === 'pending' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsVerifyOpen(true);
-                                }}
-                              >
-                                <ClipboardCheck className="h-4 w-4 mr-1" />
-                                Verify
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedExpense(expense);
+                                    setIsVerifyOpen(true);
+                                  }}
+                                >
+                                  <ClipboardCheck className="h-4 w-4 mr-1" />
+                                  Verify
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedExpense(expense);
+                                    setRejectReason("");
+                                    setIsRejectOpen(true);
+                                  }}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
                             )}
                           </TableCell>
                         )}
@@ -572,6 +588,56 @@ export default function Expenses() {
         open={isVerifyOpen}
         onOpenChange={setIsVerifyOpen}
       />
+
+      {/* Quick Reject Dialog */}
+      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Expense</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting this expense of {selectedExpense ? `₹${selectedExpense.amount?.toLocaleString('en-IN')}` : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Rejection Reason *</Label>
+              <Textarea
+                placeholder="Enter reason for rejection..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!rejectReason.trim() || updateExpense.isPending}
+              onClick={async () => {
+                if (!selectedExpense || !rejectReason.trim()) return;
+                await updateExpense.mutateAsync({
+                  id: selectedExpense.id,
+                  status: 'rejected',
+                  verification_status: 'rejected',
+                  rejection_reason: rejectReason,
+                });
+                setIsRejectOpen(false);
+                setSelectedExpense(null);
+                setRejectReason("");
+              }}
+            >
+              {updateExpense.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <X className="h-4 w-4 mr-2" />
+              )}
+              Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
