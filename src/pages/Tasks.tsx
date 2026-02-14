@@ -69,18 +69,31 @@ const TaskCard = ({ task, completed = false, onStatusChange, onTaskClick }: Task
   const isSiteVisit = isSiteVisitTask(task);
   
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't trigger if clicking on checkbox
     if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
+    if ((e.target as HTMLElement).closest('[data-radix-select-trigger]')) return;
     
     if (isSiteVisit && onTaskClick && !completed) {
       onTaskClick(task);
     }
   };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('taskId', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+    (e.currentTarget as HTMLElement).style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    (e.currentTarget as HTMLElement).style.opacity = '1';
+  };
   
   return (
     <div 
-      className={`rounded-lg bg-card border border-border p-4 transition-all hover:shadow-sm ${
-        isSiteVisit && !completed ? 'cursor-pointer hover:border-primary/50' : ''
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      className={`rounded-lg bg-card border border-border p-4 transition-all hover:shadow-sm cursor-grab active:cursor-grabbing ${
+        isSiteVisit && !completed ? 'hover:border-primary/50' : ''
       }`}
       onClick={handleCardClick}
     >
@@ -157,6 +170,13 @@ const TaskCard = ({ task, completed = false, onStatusChange, onTaskClick }: Task
   );
 };
 
+const COLUMNS: { key: TaskStatus; label: string; badgeClass: string; emptyText: string }[] = [
+  { key: 'pending', label: 'To Do', badgeClass: 'bg-muted text-foreground', emptyText: 'No pending tasks' },
+  { key: 'in_progress', label: 'In Progress', badgeClass: 'bg-warning/20 text-warning', emptyText: 'No tasks in progress' },
+  { key: 'delayed', label: 'Delayed', badgeClass: 'bg-destructive/20 text-destructive', emptyText: 'No delayed tasks' },
+  { key: 'completed', label: 'Completed', badgeClass: 'bg-success/20 text-success', emptyText: 'No completed tasks' },
+];
+
 const Tasks = () => {
   const { tasks, isLoading, createTask, updateTaskStatus } = useTasks();
   const { projects } = useProjects();
@@ -167,6 +187,7 @@ const Tasks = () => {
   const [projectFilter, setProjectFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -207,13 +228,29 @@ const Tasks = () => {
     return task.project_id === projectFilter;
   }) || [];
 
-  const todoTasks = filteredTasks.filter(t => t.status === 'pending');
-  const inProgressTasks = filteredTasks.filter(t => t.status === 'in_progress');
-  const completedTasks = filteredTasks.filter(t => t.status === 'completed');
-  const delayedTasks = filteredTasks.filter(t => t.status === 'delayed');
+  const tasksByStatus = (status: TaskStatus) => filteredTasks.filter(t => t.status === status);
 
   const handleStatusChange = (taskId: string, status: TaskStatus) => {
     updateTaskStatus.mutate({ id: taskId, status });
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStatus: TaskStatus) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    const taskId = e.dataTransfer.getData('taskId');
+    if (taskId) {
+      handleStatusChange(taskId, targetStatus);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: TaskStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(status);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -282,101 +319,45 @@ const Tasks = () => {
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-4">
-          {/* To Do Column */}
-          <div className="rounded-xl bg-muted/30 p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">To Do</h3>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                {todoTasks.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {todoTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No pending tasks</p>
-              ) : (
-                todoTasks.map((task) => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task} 
-                    onStatusChange={handleStatusChange}
-                    onTaskClick={handleSiteVisitTaskClick}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* In Progress Column */}
-          <div className="rounded-xl bg-muted/30 p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">In Progress</h3>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-warning/20 text-xs font-medium text-warning">
-                {inProgressTasks.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {inProgressTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No tasks in progress</p>
-              ) : (
-                inProgressTasks.map((task) => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    onTaskClick={handleSiteVisitTaskClick}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Delayed Column */}
-          <div className="rounded-xl bg-muted/30 p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">Delayed</h3>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive/20 text-xs font-medium text-destructive">
-                {delayedTasks.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {delayedTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No delayed tasks</p>
-              ) : (
-                delayedTasks.map((task) => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    onTaskClick={handleSiteVisitTaskClick}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Completed Column */}
-          <div className="rounded-xl bg-muted/30 p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">Completed</h3>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-success/20 text-xs font-medium text-success">
-                {completedTasks.length}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {completedTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No completed tasks</p>
-              ) : (
-                completedTasks.map((task) => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task} 
-                    completed
-                    onStatusChange={handleStatusChange}
-                  />
-                ))
-              )}
-            </div>
-          </div>
+          {COLUMNS.map((col) => {
+            const columnTasks = tasksByStatus(col.key);
+            const isCompleted = col.key === 'completed';
+            return (
+              <div
+                key={col.key}
+                className={`rounded-xl p-4 min-h-[200px] transition-colors ${
+                  dragOverColumn === col.key
+                    ? 'bg-primary/10 border-2 border-dashed border-primary'
+                    : 'bg-muted/30'
+                }`}
+                onDrop={(e) => handleDrop(e, col.key)}
+                onDragOver={(e) => handleDragOver(e, col.key)}
+                onDragLeave={handleDragLeave}
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">{col.label}</h3>
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${col.badgeClass}`}>
+                    {columnTasks.length}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {columnTasks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">{col.emptyText}</p>
+                  ) : (
+                    columnTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        completed={isCompleted}
+                        onStatusChange={handleStatusChange}
+                        onTaskClick={isCompleted ? undefined : handleSiteVisitTaskClick}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
