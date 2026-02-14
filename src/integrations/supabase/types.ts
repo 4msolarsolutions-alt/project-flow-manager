@@ -522,40 +522,55 @@ export type Database = {
         Row: {
           company_name: string | null
           created_at: string | null
+          daily_wage: number | null
           email: string | null
           first_name: string | null
+          food_allowance_per_day: number | null
           hourly_rate: number | null
           id: string
           is_active: boolean | null
           last_name: string | null
           login_type: Database["public"]["Enums"]["login_type"]
+          monthly_salary: number | null
           phone: string | null
+          salary_type: string | null
+          travel_rate_per_km: number | null
           updated_at: string | null
         }
         Insert: {
           company_name?: string | null
           created_at?: string | null
+          daily_wage?: number | null
           email?: string | null
           first_name?: string | null
+          food_allowance_per_day?: number | null
           hourly_rate?: number | null
           id: string
           is_active?: boolean | null
           last_name?: string | null
           login_type?: Database["public"]["Enums"]["login_type"]
+          monthly_salary?: number | null
           phone?: string | null
+          salary_type?: string | null
+          travel_rate_per_km?: number | null
           updated_at?: string | null
         }
         Update: {
           company_name?: string | null
           created_at?: string | null
+          daily_wage?: number | null
           email?: string | null
           first_name?: string | null
+          food_allowance_per_day?: number | null
           hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
           last_name?: string | null
           login_type?: Database["public"]["Enums"]["login_type"]
+          monthly_salary?: number | null
           phone?: string | null
+          salary_type?: string | null
+          travel_rate_per_km?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -680,12 +695,22 @@ export type Database = {
           lead_id: string | null
           notes: string | null
           pm_id: string | null
+          project_category:
+            | Database["public"]["Enums"]["project_category"]
+            | null
           project_name: string
+          project_revenue: number | null
           project_type: Database["public"]["Enums"]["project_type"]
           solar_layout: Json | null
           start_date: string | null
           status: string | null
           total_amount: number | null
+          total_food_cost: number | null
+          total_hours_worked: number | null
+          total_labor_cost: number | null
+          total_material_cost: number | null
+          total_other_cost: number | null
+          total_travel_cost: number | null
           updated_at: string | null
         }
         Insert: {
@@ -697,12 +722,22 @@ export type Database = {
           lead_id?: string | null
           notes?: string | null
           pm_id?: string | null
+          project_category?:
+            | Database["public"]["Enums"]["project_category"]
+            | null
           project_name: string
+          project_revenue?: number | null
           project_type?: Database["public"]["Enums"]["project_type"]
           solar_layout?: Json | null
           start_date?: string | null
           status?: string | null
           total_amount?: number | null
+          total_food_cost?: number | null
+          total_hours_worked?: number | null
+          total_labor_cost?: number | null
+          total_material_cost?: number | null
+          total_other_cost?: number | null
+          total_travel_cost?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -714,12 +749,22 @@ export type Database = {
           lead_id?: string | null
           notes?: string | null
           pm_id?: string | null
+          project_category?:
+            | Database["public"]["Enums"]["project_category"]
+            | null
           project_name?: string
+          project_revenue?: number | null
           project_type?: Database["public"]["Enums"]["project_type"]
           solar_layout?: Json | null
           start_date?: string | null
           status?: string | null
           total_amount?: number | null
+          total_food_cost?: number | null
+          total_hours_worked?: number | null
+          total_labor_cost?: number | null
+          total_material_cost?: number | null
+          total_other_cost?: number | null
+          total_travel_cost?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1070,6 +1115,7 @@ export type Database = {
         Row: {
           created_at: string
           date: string
+          distance_km: number | null
           id: string
           latitude_in: string | null
           latitude_out: string | null
@@ -1089,6 +1135,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date?: string
+          distance_km?: number | null
           id?: string
           latitude_in?: string | null
           latitude_out?: string | null
@@ -1108,6 +1155,7 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string
+          distance_km?: number | null
           id?: string
           latitude_in?: string | null
           latitude_out?: string | null
@@ -1286,7 +1334,8 @@ export type Database = {
       panel_loading: "lift_available" | "staircase_carry" | "rope_handling"
       payment_status: "pending" | "partial" | "completed"
       payment_type: "advance" | "progress" | "final"
-      project_type: "epc" | "service" | "oam"
+      project_category: "residential" | "commercial" | "industrial"
+      project_type: "epc" | "service" | "oam" | "i_and_c"
       quote_status: "draft" | "sent" | "approved" | "rejected"
       structure_material: "ms" | "aluminium" | "gi"
       task_status: "pending" | "in_progress" | "completed" | "delayed"
@@ -1466,7 +1515,8 @@ export const Constants = {
       panel_loading: ["lift_available", "staircase_carry", "rope_handling"],
       payment_status: ["pending", "partial", "completed"],
       payment_type: ["advance", "progress", "final"],
-      project_type: ["epc", "service", "oam"],
+      project_category: ["residential", "commercial", "industrial"],
+      project_type: ["epc", "service", "oam", "i_and_c"],
       quote_status: ["draft", "sent", "approved", "rejected"],
       structure_material: ["ms", "aluminium", "gi"],
       task_status: ["pending", "in_progress", "completed", "delayed"],
