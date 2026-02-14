@@ -540,7 +540,16 @@ export default function Expenses() {
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
-                        <TableCell>{getStatusBadge(expense.status || 'pending')}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {getStatusBadge(expense.status || 'pending')}
+                            {expense.status === 'rejected' && expense.rejection_reason && (
+                              <span className="text-xs text-destructive max-w-[200px] line-clamp-2">
+                                {expense.rejection_reason}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         {canApprove && (
                           <TableCell>
                             {expense.status === 'pending' && (
