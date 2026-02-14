@@ -101,7 +101,7 @@ export default function Expenses() {
       toast({ title: "Error", description: "Please select a lead", variant: "destructive" });
       return;
     }
-    if (!billFile) {
+    if (!billFile && expenseType !== "food") {
       toast({ title: "Error", description: "Bill image is mandatory", variant: "destructive" });
       return;
     }
@@ -262,7 +262,7 @@ export default function Expenses() {
                   <DialogHeader>
                     <DialogTitle>Submit Expense</DialogTitle>
                     <DialogDescription>
-                      Upload your bill and enter expense details. Bill image is mandatory.
+                      Upload your bill and enter expense details. Bill image is mandatory (optional for food).
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
