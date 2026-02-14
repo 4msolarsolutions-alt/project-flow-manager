@@ -9,13 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Camera, DollarSign, Loader2, Plus, Receipt, Upload, Eye, Check, X, AlertCircle, ClipboardCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CalendarIcon, Camera, DollarSign, Loader2, Plus, Receipt, Upload, Eye, Check, X, AlertCircle, ClipboardCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ExpenseVerificationDialog } from "@/components/expenses/ExpenseVerificationDialog";
 
@@ -41,6 +44,7 @@ export default function Expenses() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [billFile, setBillFile] = useState<File | null>(null);
+  const [expenseDate, setExpenseDate] = useState<Date | undefined>(new Date());
   const [isUploading, setIsUploading] = useState(false);
 
   // For food expense calculation
@@ -62,6 +66,7 @@ export default function Expenses() {
     setAmount("");
     setDescription("");
     setBillFile(null);
+    setExpenseDate(new Date());
     setPersons("1");
     setDays("1");
   };
@@ -143,6 +148,7 @@ export default function Expenses() {
         rate_per_day: expenseType === "food" ? ratePerDay : null,
         bill_image_url: fileName,
         expense_scope: expenseScope as "project" | "company",
+        expense_date: expenseDate ? format(expenseDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
       });
 
       setIsAddOpen(false);
@@ -250,14 +256,14 @@ export default function Expenses() {
                     Add Expense
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
                   <DialogHeader>
                     <DialogTitle>Submit Expense</DialogTitle>
                     <DialogDescription>
                       Upload your bill and enter expense details. Bill image is mandatory.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
                     <div>
                       <Label>Expense Type *</Label>
                       <Select value={expenseType} onValueChange={setExpenseType}>
@@ -334,6 +340,34 @@ export default function Expenses() {
                         </Select>
                       </div>
                     )}
+
+                    <div>
+                      <Label>Expense Date *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal mt-1",
+                              !expenseDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {expenseDate ? format(expenseDate, "dd MMM yyyy") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 z-50 bg-popover" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={expenseDate}
+                            onSelect={setExpenseDate}
+                            disabled={(date) => date > new Date()}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
 
                     {expenseType === "food" ? (
                       <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
