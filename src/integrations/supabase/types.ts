@@ -1274,6 +1274,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_labor_cost: {
+        Args: {
+          p_daily_wage: number
+          p_hourly_rate: number
+          p_monthly_salary: number
+          p_salary_type: string
+          p_total_hours: number
+        }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

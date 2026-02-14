@@ -123,7 +123,7 @@ const Leads = () => {
     city: "",
     state: "",
     pincode: "",
-    project_type: "epc" as "epc" | "service" | "oam",
+    project_type: "epc" as "epc" | "service" | "oam" | "i_and_c",
     lead_source: "",
     notes: "",
   });
@@ -529,13 +529,14 @@ const Leads = () => {
                 <Label htmlFor="project_type">Project Type *</Label>
                 <Select
                   value={formData.project_type}
-                  onValueChange={(value: "epc" | "service" | "oam") => setFormData({ ...formData, project_type: value })}
+                  onValueChange={(value: "epc" | "service" | "oam" | "i_and_c") => setFormData({ ...formData, project_type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="epc">EPC</SelectItem>
+                    <SelectItem value="i_and_c">I&C</SelectItem>
                     <SelectItem value="service">Service</SelectItem>
                     <SelectItem value="oam">O&M</SelectItem>
                   </SelectContent>
@@ -929,13 +930,14 @@ const Leads = () => {
                 <Label htmlFor="edit_project_type">Project Type *</Label>
                 <Select
                   value={formData.project_type}
-                  onValueChange={(value: "epc" | "service" | "oam") => setFormData({ ...formData, project_type: value })}
+                  onValueChange={(value: "epc" | "service" | "oam" | "i_and_c") => setFormData({ ...formData, project_type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="epc">EPC</SelectItem>
+                    <SelectItem value="i_and_c">I&C</SelectItem>
                     <SelectItem value="service">Service</SelectItem>
                     <SelectItem value="oam">O&M</SelectItem>
                   </SelectContent>

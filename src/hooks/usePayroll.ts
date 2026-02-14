@@ -27,6 +27,11 @@ export interface Payroll {
     last_name: string | null;
     email: string | null;
     hourly_rate: number | null;
+    salary_type: string | null;
+    monthly_salary: number | null;
+    daily_wage: number | null;
+    food_allowance_per_day: number | null;
+    travel_rate_per_km: number | null;
   } | null;
 }
 
@@ -35,6 +40,11 @@ interface GeneratePayrollData {
   month: number;
   year: number;
   hourly_rate: number;
+  salary_type?: string;
+  monthly_salary?: number;
+  daily_wage?: number;
+  food_allowance_per_day?: number;
+  travel_rate_per_km?: number;
 }
 
 export function usePayroll() {
@@ -59,7 +69,7 @@ export function usePayroll() {
       const userIds = [...new Set(payrollData.map(p => p.user_id))];
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, hourly_rate')
+        .select('id, first_name, last_name, email, hourly_rate, salary_type, monthly_salary, daily_wage, food_allowance_per_day, travel_rate_per_km')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
@@ -95,6 +105,31 @@ export function usePayroll() {
     return data.reduce((sum, log) => sum + (Number(log.total_hours) || 0), 0);
   };
 
+  // Calculate food and travel allowance from time logs
+  const calculateAllowancesForPeriod = async (userId: string, month: number, year: number, foodRate: number, travelRate: number) => {
+    const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('time_logs')
+      .select('total_hours, distance_km')
+      .eq('user_id', userId)
+      .eq('work_type', 'project')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .not('total_hours', 'is', null);
+
+    if (error) throw error;
+
+    const daysWorked = data.filter(l => (Number(l.total_hours) || 0) > 0).length;
+    const totalKm = data.reduce((sum, l) => sum + (Number(l.distance_km) || 0), 0);
+
+    return {
+      foodAllowance: daysWorked * foodRate,
+      travelAllowance: totalKm * travelRate,
+    };
+  };
+
   // Calculate approved expense reimbursement for a period
   const calculateExpensesForPeriod = async (userId: string, month: number, year: number) => {
     const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
@@ -118,11 +153,31 @@ export function usePayroll() {
     mutationFn: async (data: GeneratePayrollData) => {
       if (!user) throw new Error('User not authenticated');
 
+      const salaryType = data.salary_type || 'monthly';
+      const foodRate = data.food_allowance_per_day ?? 200;
+      const travelRate = data.travel_rate_per_km ?? 10;
+
       // Calculate hours from time logs
       const totalHours = await calculateHoursForPeriod(data.user_id, data.month, data.year);
       
+      // Calculate labor cost based on salary type
+      let laborCost = 0;
+      if (salaryType === 'hourly') {
+        laborCost = totalHours * (data.hourly_rate || 0);
+      } else if (salaryType === 'daily') {
+        laborCost = ((data.daily_wage || 0) / 8) * totalHours;
+      } else {
+        laborCost = ((data.monthly_salary || 0) / 26 / 8) * totalHours;
+      }
+
+      // Calculate food & travel allowances
+      const { foodAllowance, travelAllowance } = await calculateAllowancesForPeriod(data.user_id, data.month, data.year, foodRate, travelRate);
+
       // Calculate approved expenses
       const expenseReimbursement = await calculateExpensesForPeriod(data.user_id, data.month, data.year);
+
+      // Total payable = laborCost + foodAllowance + travelAllowance + approvedExpenses
+      const totalPayable = laborCost + foodAllowance + travelAllowance + expenseReimbursement;
 
       const { data: result, error } = await supabase
         .from('payroll')
@@ -132,7 +187,9 @@ export function usePayroll() {
           year: data.year,
           total_hours: totalHours,
           hourly_rate: data.hourly_rate,
-          expense_reimbursement: expenseReimbursement,
+          base_salary: laborCost,
+          expense_reimbursement: expenseReimbursement + foodAllowance + travelAllowance,
+          total_payable: totalPayable,
           status: 'generated',
           generated_by: user.id,
         }, {
@@ -274,7 +331,7 @@ export function useEmployeesForPayroll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, hourly_rate')
+        .select('id, first_name, last_name, email, hourly_rate, salary_type, monthly_salary, daily_wage, food_allowance_per_day, travel_rate_per_km')
         .eq('login_type', 'employee')
         .eq('is_active', true)
         .order('first_name');
