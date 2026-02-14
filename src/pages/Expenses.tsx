@@ -499,6 +499,7 @@ export default function Expenses() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead>Employee</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Lead / Project</TableHead>
                       <TableHead>Description</TableHead>
@@ -515,6 +516,9 @@ export default function Expenses() {
                           {expense.expense_date 
                             ? format(new Date(expense.expense_date), 'dd MMM yyyy')
                             : '-'}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {(expense as any).employee_name || '-'}
                         </TableCell>
                         <TableCell className="capitalize">{expense.expense_type}</TableCell>
                         <TableCell>
