@@ -118,20 +118,19 @@ export default function Expenses() {
     setIsUploading(true);
 
     try {
-      // Upload bill image to storage
-      const fileExt = billFile.name.split('.').pop();
-      const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('expense-bills')
-        .upload(fileName, billFile);
+      let fileName: string | null = null;
 
-      if (uploadError) throw uploadError;
+      // Upload bill image to storage (optional for food)
+      if (billFile) {
+        const fileExt = billFile.name.split('.').pop();
+        fileName = `${user?.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('expense-bills')
+          .upload(fileName, billFile);
 
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('expense-bills')
-        .getPublicUrl(fileName);
+        if (uploadError) throw uploadError;
+      }
 
       // Create expense record with work_type logic
       // Lead = Company expense, Project = Project expense, Company = Company expense
