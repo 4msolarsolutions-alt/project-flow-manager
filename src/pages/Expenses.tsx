@@ -15,6 +15,7 @@ import { useExpenses } from "@/hooks/useExpenses";
 import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useAuth } from "@/hooks/useAuth";
+import { useUsers } from "@/hooks/useUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ export default function Expenses() {
   const { projects } = useProjects();
   const { leads } = useLeads();
   const { user, isAdmin, hasRole } = useAuth();
+  const { data: users } = useUsers();
   const { toast } = useToast();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -57,8 +59,12 @@ export default function Expenses() {
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("");
 
   const canApprove = isAdmin() || hasRole('accounts');
+
+  // Employees list for admin to select
+  const employees = users?.filter(u => u.login_type === 'employee' || u.login_type === 'admin') || [];
 
   const resetForm = () => {
     setWorkType("project");
@@ -71,6 +77,7 @@ export default function Expenses() {
     setExpenseDate(new Date());
     setPersons("1");
     setDays("1");
+    setSelectedEmployee("");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,6 +98,10 @@ export default function Expenses() {
   const handleSubmit = async () => {
     if (!expenseType) {
       toast({ title: "Error", description: "Please select expense type", variant: "destructive" });
+      return;
+    }
+    if (canApprove && !selectedEmployee) {
+      toast({ title: "Error", description: "Please select an employee", variant: "destructive" });
       return;
     }
     if (workType === "project" && !selectedProject) {
@@ -143,7 +154,7 @@ export default function Expenses() {
         work_type: workType,
         amount: expenseAmount,
         description,
-        submitted_by: user?.id,
+        submitted_by: canApprove && selectedEmployee ? selectedEmployee : user?.id,
         persons: expenseType === "food" ? parseInt(persons) : null,
         days: expenseType === "food" ? parseInt(days) : null,
         rate_per_day: expenseType === "food" ? ratePerDay : null,
@@ -249,7 +260,7 @@ export default function Expenses() {
                   : "Submit and track your expense claims"}
               </CardDescription>
             </div>
-            {!canApprove && (
+            {(
               <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
@@ -265,6 +276,23 @@ export default function Expenses() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
+                    {canApprove && (
+                      <div>
+                        <Label>Employee *</Label>
+                        <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select employee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map((emp) => (
+                              <SelectItem key={emp.id} value={emp.id}>
+                                {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div>
                       <Label>Expense Type *</Label>
                       <Select value={expenseType} onValueChange={setExpenseType}>
