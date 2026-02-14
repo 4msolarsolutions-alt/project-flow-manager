@@ -33,7 +33,7 @@ export default function Expenses() {
   const { expenses, totals, isLoading, createExpense } = useExpenses();
   const { projects } = useProjects();
   const { leads } = useLeads();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, hasRole } = useAuth();
   const { toast } = useToast();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -56,7 +56,7 @@ export default function Expenses() {
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
 
-  const canApprove = isAdmin();
+  const canApprove = isAdmin() || hasRole('accounts');
 
   const resetForm = () => {
     setWorkType("project");

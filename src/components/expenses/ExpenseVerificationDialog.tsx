@@ -94,7 +94,7 @@ export function ExpenseVerificationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Verify Expense</DialogTitle>
           <DialogDescription>
@@ -103,7 +103,7 @@ export function ExpenseVerificationDialog({
         </DialogHeader>
         
         {expense && (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
             {/* Expense Details */}
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
