@@ -3,6 +3,8 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentLeads } from "@/components/dashboard/RecentLeads";
 import { ProjectProgress } from "@/components/dashboard/ProjectProgress";
 import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
+import { CompanyFinancials } from "@/components/dashboard/CompanyFinancials";
+import { ProjectFinancials } from "@/components/dashboard/ProjectFinancials";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FolderKanban, Zap, DollarSign, AlertTriangle, Clock } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
@@ -56,6 +58,12 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* Company Financials */}
+      <div className="mt-4 md:mt-6">
+        <h2 className="text-lg font-semibold mb-3">Company Financials</h2>
+        <CompanyFinancials />
+      </div>
+
       {/* Row 2 - Charts */}
       <div className="mt-4 md:mt-6 grid gap-4 md:gap-6 lg:grid-cols-2">
         <ProjectProgress />
@@ -69,6 +77,11 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Project Financial Table */}
+      <div className="mt-4 md:mt-6">
+        <ProjectFinancials />
       </div>
 
       {/* Row 3 - Tables */}

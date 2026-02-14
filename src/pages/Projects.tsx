@@ -117,6 +117,8 @@ const Projects = () => {
   const [formData, setFormData] = useState({
     project_name: "",
     project_type: "epc" as ProjectType,
+    project_category: "residential",
+    project_revenue: "",
     lead_id: "",
     pm_id: "",
     capacity_kw: "",
@@ -131,6 +133,8 @@ const Projects = () => {
     setFormData({
       project_name: "",
       project_type: "epc",
+      project_category: "residential",
+      project_revenue: "",
       lead_id: "",
       pm_id: "",
       capacity_kw: "",
@@ -152,6 +156,8 @@ const Projects = () => {
     setFormData({
       project_name: project.project_name || "",
       project_type: project.project_type || "epc",
+      project_category: project.project_category || "residential",
+      project_revenue: project.project_revenue?.toString() || "",
       lead_id: project.lead_id || "",
       pm_id: project.pm_id || "",
       capacity_kw: project.capacity_kw?.toString() || "",
@@ -173,6 +179,8 @@ const Projects = () => {
       await createProject.mutateAsync({
         project_name: formData.project_name,
         project_type: formData.project_type,
+        project_category: formData.project_category as any,
+        project_revenue: formData.project_revenue ? parseFloat(formData.project_revenue) : 0,
         lead_id: formData.lead_id || null,
         pm_id: formData.pm_id || null,
         capacity_kw: formData.capacity_kw ? parseFloat(formData.capacity_kw) : null,
@@ -181,7 +189,7 @@ const Projects = () => {
         expected_end_date: formData.expected_end_date || null,
         status: formData.status,
         notes: formData.notes || null,
-      });
+      } as any);
       setIsAddDialogOpen(false);
       resetForm();
     } finally {
@@ -199,6 +207,8 @@ const Projects = () => {
         id: selectedProject.id,
         project_name: formData.project_name,
         project_type: formData.project_type,
+        project_category: formData.project_category as any,
+        project_revenue: formData.project_revenue ? parseFloat(formData.project_revenue) : 0,
         lead_id: formData.lead_id || null,
         pm_id: formData.pm_id || null,
         capacity_kw: formData.capacity_kw ? parseFloat(formData.capacity_kw) : null,
@@ -207,7 +217,7 @@ const Projects = () => {
         expected_end_date: formData.expected_end_date || null,
         status: formData.status,
         notes: formData.notes || null,
-      });
+      } as any);
       setIsEditDialogOpen(false);
       setSelectedProject(null);
       resetForm();
@@ -415,6 +425,7 @@ const Projects = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="epc">EPC</SelectItem>
+                    <SelectItem value="i_and_c">I&C</SelectItem>
                     <SelectItem value="service">Service</SelectItem>
                     <SelectItem value="oam">O&M</SelectItem>
                   </SelectContent>
@@ -436,6 +447,35 @@ const Projects = () => {
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={formData.project_category}
+                  onValueChange={(value) => setFormData({ ...formData, project_category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="industrial">Industrial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="project_revenue">Project Revenue (₹)</Label>
+                <Input
+                  id="project_revenue"
+                  type="number"
+                  value={formData.project_revenue}
+                  onChange={(e) => setFormData({ ...formData, project_revenue: e.target.value })}
+                  placeholder="0"
+                />
               </div>
             </div>
 
@@ -614,6 +654,59 @@ const Projects = () => {
                   <p className="font-medium">{selectedProject.notes}</p>
                 </div>
               )}
+
+              {/* Financial Summary */}
+              <div className="border-t pt-4 mt-2">
+                <h4 className="font-semibold text-sm mb-3">Financial Summary</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Revenue:</span>
+                    <span className="ml-2 font-medium">{formatCurrency(selectedProject.project_revenue || selectedProject.total_amount)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Labor:</span>
+                    <span className="ml-2 font-medium">{formatCurrency(selectedProject.total_labor_cost)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Food:</span>
+                    <span className="ml-2 font-medium">{formatCurrency(selectedProject.total_food_cost)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Travel:</span>
+                    <span className="ml-2 font-medium">{formatCurrency(selectedProject.total_travel_cost)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Material:</span>
+                    <span className="ml-2 font-medium">{formatCurrency(selectedProject.total_material_cost)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Other:</span>
+                    <span className="ml-2 font-medium">{formatCurrency(selectedProject.total_other_cost)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Hours:</span>
+                    <span className="ml-2 font-medium">{(selectedProject.total_hours_worked || 0).toFixed(1)}h</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Category:</span>
+                    <span className="ml-2 font-medium capitalize">{selectedProject.project_category || "-"}</span>
+                  </div>
+                </div>
+                {(() => {
+                  const revenue = Number(selectedProject.project_revenue || selectedProject.total_amount) || 0;
+                  const expense = (Number(selectedProject.total_labor_cost) || 0) + (Number(selectedProject.total_food_cost) || 0) + (Number(selectedProject.total_travel_cost) || 0) + (Number(selectedProject.total_material_cost) || 0) + (Number(selectedProject.total_other_cost) || 0);
+                  const profit = revenue - expense;
+                  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+                  return (
+                    <div className="mt-3 flex gap-4 text-sm font-semibold">
+                      <span>Total Cost: {formatCurrency(expense)}</span>
+                      <span className={profit >= 0 ? "text-success" : "text-destructive"}>
+                        Profit: {formatCurrency(profit)} ({revenue > 0 ? margin.toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -663,6 +756,7 @@ const Projects = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="epc">EPC</SelectItem>
+                    <SelectItem value="i_and_c">I&C</SelectItem>
                     <SelectItem value="service">Service</SelectItem>
                     <SelectItem value="oam">O&M</SelectItem>
                   </SelectContent>
@@ -684,6 +778,35 @@ const Projects = () => {
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={formData.project_category}
+                  onValueChange={(value) => setFormData({ ...formData, project_category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="residential">Residential</SelectItem>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="industrial">Industrial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_project_revenue">Project Revenue (₹)</Label>
+                <Input
+                  id="edit_project_revenue"
+                  type="number"
+                  value={formData.project_revenue}
+                  onChange={(e) => setFormData({ ...formData, project_revenue: e.target.value })}
+                  placeholder="0"
+                />
               </div>
             </div>
 
