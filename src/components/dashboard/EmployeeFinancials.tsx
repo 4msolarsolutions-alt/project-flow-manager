@@ -1,0 +1,121 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useTimeLogs } from "@/hooks/useTimeLogs";
+import { useExpenses } from "@/hooks/useExpenses";
+import { usePayroll } from "@/hooks/usePayroll";
+import { useProjects } from "@/hooks/useProjects";
+import {
+  Clock,
+  FolderKanban,
+  Wallet,
+  UtensilsCrossed,
+  Car,
+  Receipt,
+} from "lucide-react";
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(n);
+
+export function EmployeeFinancials() {
+  const { user } = useAuth();
+  const { timeLogs } = useTimeLogs();
+  const { expenses } = useExpenses();
+  const { payrollRecords } = usePayroll();
+  const { projects } = useProjects();
+
+  const myLogs = timeLogs?.filter((l) => l.user_id === user?.id) || [];
+  const myExpenses = expenses?.filter((e) => (e as any).submitted_by === user?.id) || [];
+
+  // Total hours worked (all completed project logs)
+  const totalHours = myLogs
+    .filter((l) => l.status === "completed")
+    .reduce((s, l) => s + (Number(l.total_hours) || 0), 0);
+
+  // Unique projects worked on
+  const projectIds = new Set(myLogs.filter((l) => l.project_id).map((l) => l.project_id));
+  const projectsWorked = projectIds.size;
+
+  // Current month payroll
+  const now = new Date();
+  const myPayroll = payrollRecords?.find(
+    (p) => p.user_id === user?.id && p.month === now.getMonth() + 1 && p.year === now.getFullYear()
+  );
+
+  // Food & travel from approved expenses
+  const approvedFood = myExpenses
+    .filter((e) => e.expense_type === "food" && e.status === "approved")
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const approvedTravel = myExpenses
+    .filter((e) => e.expense_type === "travel" && e.status === "approved")
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const totalSubmitted = myExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const cards = [
+    {
+      title: "Total Hours Worked",
+      value: `${totalHours.toFixed(1)}h`,
+      icon: Clock,
+      color: "text-info",
+      bg: "bg-info/10",
+    },
+    {
+      title: "Projects Worked",
+      value: projectsWorked.toString(),
+      icon: FolderKanban,
+      color: "text-primary",
+      bg: "bg-primary/10",
+    },
+    {
+      title: "Food Received",
+      value: fmt(approvedFood),
+      icon: UtensilsCrossed,
+      color: "text-warning",
+      bg: "bg-warning/10",
+    },
+    {
+      title: "Travel Claimed",
+      value: fmt(approvedTravel),
+      icon: Car,
+      color: "text-accent-foreground",
+      bg: "bg-accent/50",
+    },
+    {
+      title: "Expenses Submitted",
+      value: fmt(totalSubmitted),
+      icon: Receipt,
+      color: "text-muted-foreground",
+      bg: "bg-muted",
+    },
+    {
+      title: "Net Payroll",
+      value: myPayroll ? fmt(Number(myPayroll.total_payable) || 0) : "—",
+      icon: Wallet,
+      color: "text-success",
+      bg: "bg-success/10",
+    },
+  ];
+
+  return (
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+      {cards.map((card) => (
+        <Card key={card.title}>
+          <CardContent className="flex items-start gap-3 p-4 md:p-6">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${card.bg} shrink-0`}>
+              <card.icon className={`h-5 w-5 ${card.color}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">{card.title}</p>
+              <p className="text-lg md:text-xl font-bold">{card.value}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}

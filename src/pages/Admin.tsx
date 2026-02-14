@@ -31,6 +31,7 @@ import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { UserStatusDialog } from "@/components/admin/UserStatusDialog";
 import { AddEmployeeDialog } from "@/components/admin/AddEmployeeDialog";
 import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
+import { SalaryConfigDialog } from "@/components/admin/SalaryConfigDialog";
 import {
   Search,
   Filter,
@@ -47,6 +48,7 @@ import {
   UserX,
   Key,
   Trash2,
+  Wallet,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -93,6 +95,7 @@ const Admin = () => {
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
 
   // Check admin access
   if (!isAdmin()) {
@@ -358,6 +361,15 @@ const Admin = () => {
                             <MailCheck className="mr-2 h-4 w-4" />
                             Confirm Email
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setSalaryDialogOpen(true);
+                            }}
+                          >
+                            <Wallet className="mr-2 h-4 w-4" />
+                            Salary Config
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
@@ -451,6 +463,12 @@ const Admin = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SalaryConfigDialog
+        user={selectedUser}
+        open={salaryDialogOpen}
+        onOpenChange={setSalaryDialogOpen}
+      />
     </AppLayout>
   );
 };

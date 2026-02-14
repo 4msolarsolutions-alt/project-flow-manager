@@ -7,6 +7,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { useSiteVisits } from "@/hooks/useSiteVisits";
 import { useProjects } from "@/hooks/useProjects";
 import { useTimeLogs } from "@/hooks/useTimeLogs";
+import { EmployeeFinancials } from "@/components/dashboard/EmployeeFinancials";
 import { 
   ClipboardList, 
   Calendar, 
@@ -137,6 +138,12 @@ const EmployeeDashboard = () => {
 
   return (
     <AppLayout title="My Dashboard">
+      {/* Financial Summary */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-lg font-semibold mb-3">My Financials</h2>
+        <EmployeeFinancials />
+      </div>
+
       {/* Summary Stats - Row 1 */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
