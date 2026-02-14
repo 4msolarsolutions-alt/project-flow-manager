@@ -252,3 +252,33 @@ export function useConfirmEmail() {
     },
   });
 }
+
+export function useDeleteEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-delete-employee", {
+        body: { user_id: userId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Employee deleted",
+        description: "The employee account and all related records have been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting employee",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
