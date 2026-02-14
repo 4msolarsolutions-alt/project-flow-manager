@@ -97,6 +97,7 @@ const Projects = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const handleDelete = async () => {
     if (!selectedProject) return;
@@ -249,13 +250,29 @@ const Projects = () => {
     }
   };
 
+  const filteredProjects = projects?.filter(p => statusFilter === "all" || p.status === statusFilter);
+
   return (
     <AppLayout title="Projects">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <p className="text-muted-foreground">
-          {projects?.length || 0} projects total
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-muted-foreground">
+            {filteredProjects?.length || 0} of {projects?.length || 0} projects
+          </p>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="planning">Planning</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="on_hold">On Hold</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Button className="gap-2" onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="h-4 w-4" />
           New Project
@@ -267,18 +284,20 @@ const Projects = () => {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : !projects?.length ? (
+      ) : !filteredProjects?.length ? (
         <div className="text-center py-12">
           <Zap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-4">No projects yet.</p>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create your first project
-          </Button>
+          <p className="text-muted-foreground mb-4">{statusFilter !== "all" ? "No projects match this filter." : "No projects yet."}</p>
+          {statusFilter === "all" && (
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create your first project
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <div
               key={project.id}
               className="rounded-xl bg-card border border-border p-6 transition-all duration-200 hover:shadow-md animate-fade-in"
