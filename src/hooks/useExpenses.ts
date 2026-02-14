@@ -42,17 +42,26 @@ export function useExpenses(projectId?: string) {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data as (Expense & { 
-        projects: { project_name: string } | null;
-        leads: { customer_name: string } | null;
-        bill_image_url?: string;
-        verified_amount?: number;
-        verification_status?: string;
-        rejection_reason?: string;
-        expense_scope?: string;
-        work_type?: string;
-        lead_id?: string;
-      })[];
+
+      // Fetch employee names for submitted_by
+      const userIds = [...new Set((data || []).map(e => e.submitted_by).filter(Boolean))];
+      let profilesMap: Record<string, { first_name: string | null; last_name: string | null }> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', userIds);
+        if (profiles) {
+          profilesMap = Object.fromEntries(profiles.map(p => [p.id, { first_name: p.first_name, last_name: p.last_name }]));
+        }
+      }
+
+      return (data || []).map(expense => ({
+        ...expense,
+        employee_name: expense.submitted_by && profilesMap[expense.submitted_by]
+          ? `${profilesMap[expense.submitted_by].first_name || ''} ${profilesMap[expense.submitted_by].last_name || ''}`.trim()
+          : 'Unknown',
+      }));
     },
   });
 
