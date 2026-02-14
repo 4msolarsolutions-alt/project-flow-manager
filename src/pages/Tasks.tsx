@@ -96,6 +96,7 @@ const TaskCard = ({ task, completed = false, onStatusChange, onTaskClick }: Task
             }
           }}
         />
+
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <p className={`font-medium ${completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
@@ -132,6 +133,24 @@ const TaskCard = ({ task, completed = false, onStatusChange, onTaskClick }: Task
               </span>
             </div>
           </div>
+          {!completed && (
+            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+              <Select
+                value={task.status || 'pending'}
+                onValueChange={(value) => onStatusChange(task.id, value as TaskStatus)}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="delayed">Delayed</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
     </div>
