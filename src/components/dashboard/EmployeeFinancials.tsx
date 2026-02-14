@@ -3,14 +3,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTimeLogs } from "@/hooks/useTimeLogs";
 import { useExpenses } from "@/hooks/useExpenses";
 import { usePayroll } from "@/hooks/usePayroll";
-import { useProjects } from "@/hooks/useProjects";
 import {
   Clock,
-  FolderKanban,
   Wallet,
   UtensilsCrossed,
   Car,
-  Receipt,
+  AlertCircle,
+  Banknote,
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -25,7 +24,6 @@ export function EmployeeFinancials() {
   const { timeLogs } = useTimeLogs();
   const { expenses } = useExpenses();
   const { payrollRecords } = usePayroll();
-  const { projects } = useProjects();
 
   const myLogs = timeLogs?.filter((l) => l.user_id === user?.id) || [];
   const myExpenses = expenses?.filter((e) => (e as any).submitted_by === user?.id) || [];
@@ -34,10 +32,6 @@ export function EmployeeFinancials() {
   const totalHours = myLogs
     .filter((l) => l.status === "completed")
     .reduce((s, l) => s + (Number(l.total_hours) || 0), 0);
-
-  // Unique projects worked on
-  const projectIds = new Set(myLogs.filter((l) => l.project_id).map((l) => l.project_id));
-  const projectsWorked = projectIds.size;
 
   // Current month payroll
   const now = new Date();
@@ -54,47 +48,53 @@ export function EmployeeFinancials() {
     .filter((e) => e.expense_type === "travel" && e.status === "approved")
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-  const totalSubmitted = myExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  // Pending expenses
+  const pendingAmount = myExpenses
+    .filter((e) => e.status === "pending")
+    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  // Salary from payroll
+  const salary = myPayroll ? Number(myPayroll.total_payable) || 0 : 0;
 
   const cards = [
     {
-      title: "Total Hours Worked",
+      title: "Hours Worked",
       value: `${totalHours.toFixed(1)}h`,
       icon: Clock,
       color: "text-info",
       bg: "bg-info/10",
     },
     {
-      title: "Projects Worked",
-      value: projectsWorked.toString(),
-      icon: FolderKanban,
+      title: "Salary",
+      value: myPayroll ? fmt(salary) : "—",
+      icon: Banknote,
       color: "text-primary",
       bg: "bg-primary/10",
     },
     {
-      title: "Food Received",
+      title: "Food Paid",
       value: fmt(approvedFood),
       icon: UtensilsCrossed,
       color: "text-warning",
       bg: "bg-warning/10",
     },
     {
-      title: "Travel Claimed",
+      title: "Travel Paid",
       value: fmt(approvedTravel),
       icon: Car,
       color: "text-accent-foreground",
       bg: "bg-accent/50",
     },
     {
-      title: "Expenses Submitted",
-      value: fmt(totalSubmitted),
-      icon: Receipt,
-      color: "text-muted-foreground",
-      bg: "bg-muted",
+      title: "Pending",
+      value: fmt(pendingAmount),
+      icon: AlertCircle,
+      color: "text-destructive",
+      bg: "bg-destructive/10",
     },
     {
       title: "Net Payroll",
-      value: myPayroll ? fmt(Number(myPayroll.total_payable) || 0) : "—",
+      value: myPayroll ? fmt(salary) : "—",
       icon: Wallet,
       color: "text-success",
       bg: "bg-success/10",
