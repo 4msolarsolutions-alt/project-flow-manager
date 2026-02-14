@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useUsers, useConfirmEmail, type UserWithRoles } from "@/hooks/useUsers";
+import { useUsers, useConfirmEmail, useDeleteEmployee, type UserWithRoles } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { UserStatusDialog } from "@/components/admin/UserStatusDialog";
@@ -46,7 +46,18 @@ import {
   UserCheck,
   UserX,
   Key,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 
 const roleLabels: Record<string, string> = {
@@ -71,6 +82,7 @@ const Admin = () => {
   const { isAdmin } = useAuth();
   const { data: users, isLoading, error } = useUsers();
   const confirmEmailMutation = useConfirmEmail();
+  const deleteEmployeeMutation = useDeleteEmployee();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -80,6 +92,7 @@ const Admin = () => {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Check admin access
   if (!isAdmin()) {
@@ -364,6 +377,16 @@ const Admin = () => {
                               </>
                             )}
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Employee
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -394,6 +417,40 @@ const Admin = () => {
       />
 
       <AddEmployeeDialog open={addEmployeeOpen} onOpenChange={setAddEmployeeOpen} />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete{" "}
+              <span className="font-medium text-foreground">
+                {selectedUser?.first_name || selectedUser?.email || "this user"}
+              </span>
+              ? This will remove their account, roles, time logs, expenses, tasks, and all related records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteEmployeeMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={deleteEmployeeMutation.isPending}
+              onClick={async () => {
+                if (!selectedUser) return;
+                await deleteEmployeeMutation.mutateAsync({ userId: selectedUser.id });
+                setDeleteDialogOpen(false);
+                setSelectedUser(null);
+              }}
+            >
+              {deleteEmployeeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
