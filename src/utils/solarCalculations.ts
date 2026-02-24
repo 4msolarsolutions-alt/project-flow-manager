@@ -1,12 +1,15 @@
 // ========== EPC-Grade Solar Design Calculations ==========
 
 export const PANEL_OPTIONS = [
-  { label: "550W Panel (2.278m × 1.134m)", watt: 550, length: 2.278, width: 1.134, weight: 28.6 },
-  { label: "540W Panel (2.278m × 1.134m)", watt: 540, length: 2.278, width: 1.134, weight: 28.2 },
-  { label: "500W Panel (2.187m × 1.102m)", watt: 500, length: 2.187, width: 1.102, weight: 26.5 },
-  { label: "450W Panel (2.094m × 1.038m)", watt: 450, length: 2.094, width: 1.038, weight: 24.0 },
-  { label: "400W Panel (1.956m × 1.002m)", watt: 400, length: 1.956, width: 1.002, weight: 22.0 },
-  { label: "335W Panel (1.690m × 0.996m)", watt: 335, length: 1.690, width: 0.996, weight: 18.5 },
+  { label: "630Wp Bifacial G12", watt: 630, length: 2.465, width: 1.303, weight: 35, cellType: "G12 210mm", efficiency: 23.3 },
+  { label: "620Wp Bifacial", watt: 620, length: 2.384, width: 1.303, weight: 34, cellType: "N-Type Bifacial", efficiency: 23.0 },
+  { label: "615Wp TOPCon", watt: 615, length: 2.278, width: 1.134, weight: 31, cellType: "N-Type TOPCon", efficiency: 22.8 },
+  { label: "550W Panel", watt: 550, length: 2.278, width: 1.134, weight: 28.6, cellType: "Mono PERC", efficiency: 21.3 },
+  { label: "540W Panel", watt: 540, length: 2.278, width: 1.134, weight: 28.2, cellType: "Mono PERC", efficiency: 21.0 },
+  { label: "500W Panel", watt: 500, length: 2.187, width: 1.102, weight: 26.5, cellType: "Mono PERC", efficiency: 20.5 },
+  { label: "450W Panel", watt: 450, length: 2.094, width: 1.038, weight: 24.0, cellType: "Mono PERC", efficiency: 19.8 },
+  { label: "400W Panel", watt: 400, length: 1.956, width: 1.002, weight: 22.0, cellType: "Mono PERC", efficiency: 19.2 },
+  { label: "335W Panel", watt: 335, length: 1.690, width: 0.996, weight: 18.5, cellType: "Poly", efficiency: 17.1 },
 ] as const;
 
 export type PanelOption = typeof PANEL_OPTIONS[number];
@@ -246,17 +249,19 @@ export function calculateMetalRoof(
   orientation: PanelOrientation,
   panelLength: number,
   purlinSpacing: number,
-  clampType: ClampType
+  clampType: ClampType,
+  roofWidthM?: number
 ): MetalRoofDetails {
-  const railsPerPanel = orientation === "landscape" ? 2 : 3;
-  const railCount = Math.ceil(panelCount * railsPerPanel * 0.5); // Shared rails
+  // Rail count based on roof width / 1.2m standard rail spacing
+  const railCount = roofWidthM && roofWidthM > 0
+    ? Math.ceil(roofWidthM / 1.2)
+    : Math.ceil(panelCount * (orientation === "landscape" ? 2 : 3) * 0.5);
 
-  const clampsPerPanel = clampType === "l_foot" ? 4 : orientation === "landscape" ? 4 : 6;
-  // End panels need end clamps, middle panels need mid clamps
-  const clampCount = panelCount * clampsPerPanel;
+  // 4 clamps per panel
+  const clampCount = panelCount * 4;
 
-  const fastenersPerClamp = clampType === "l_foot" ? 2 : 1;
-  const fastenerCount = clampCount * fastenersPerClamp;
+  // 2 fasteners per clamp
+  const fastenerCount = clampCount * 2;
 
   return {
     purlinSpacing,
@@ -265,6 +270,17 @@ export function calculateMetalRoof(
     railCount,
     fastenerCount,
   };
+}
+
+// ========== Wind Load Warning ==========
+export function getWindLoadWarning(panelLength: number, windZone: string): string | null {
+  if (panelLength > 2.3 && windZone.toLowerCase().includes("iv")) {
+    return "High wind risk – Recommend additional anchoring";
+  }
+  if (panelLength > 2.3 && windZone.toLowerCase().includes("iii")) {
+    return "Moderate wind risk – Verify anchor design";
+  }
+  return null;
 }
 
 // ========== Safety Edge ==========

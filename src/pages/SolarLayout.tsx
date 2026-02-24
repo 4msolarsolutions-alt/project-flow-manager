@@ -150,7 +150,7 @@ function SolarLayoutInner({ project }: { project: any }) {
     activeTab, setActiveTab,
     stats, rccDetails, metalRoofDetails, compliance, roofAreaM2, usableAreaM2,
     hasPerimeterWalkway, perimeterWalkwayWidth, hasCentralWalkway, centralWalkwayWidth,
-    roofType,
+    roofType, windZone,
   } = ctx;
 
   const { createQuotation } = useQuotations();
@@ -340,6 +340,7 @@ function SolarLayoutInner({ project }: { project: any }) {
       hasCentralWalkway, centralWalkwayWidth,
       safetySetback,
       obstacleCount: obstacles.length,
+      windZone,
     });
     toast({ title: "PDF Exported", description: "Solar plan PDF downloaded." });
   };
