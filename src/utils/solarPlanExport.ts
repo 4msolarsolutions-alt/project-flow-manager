@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { DesignStats, RCCDetails, MetalRoofDetails, ComplianceStatus, PanelOption, PanelOrientation, RoofType } from "@/utils/solarCalculations";
+import { getWindLoadWarning } from "@/utils/solarCalculations";
 
 interface SolarPlanData {
   projectName: string;
@@ -22,6 +23,7 @@ interface SolarPlanData {
   centralWalkwayWidth: number;
   safetySetback: number;
   obstacleCount: number;
+  windZone: string;
 }
 
 const ROOF_LABELS: Record<RoofType, string> = {
@@ -55,12 +57,18 @@ export function exportSolarPlan(data: SolarPlanData) {
 
   // Main details table
   let yPos = 55;
+  const windWarning = getWindLoadWarning(data.panel.length, data.windZone);
+
   const mainData = [
     ["Location", `${data.latitude.toFixed(4)}°N, ${data.longitude.toFixed(4)}°E`],
+    ["Wind Zone", data.windZone],
     ["Roof Type", ROOF_LABELS[data.roofType]],
     ["Total Roof Area", `${data.roofAreaM2.toFixed(1)} m²`],
     ["Usable Area", `${data.usableAreaM2.toFixed(1)} m²`],
-    ["Panel Type", `${data.panel.watt}W (${data.panel.length}m × ${data.panel.width}m)`],
+    ["Panel Type", `${data.panel.watt}Wp ${data.panel.cellType}`],
+    ["Panel Dimensions", `${data.panel.length}m × ${data.panel.width}m (${data.panel.weight} kg)`],
+    ["Cell Technology", data.panel.cellType],
+    ["Module Efficiency", `${data.panel.efficiency}%`],
     ["Orientation", data.orientation.charAt(0).toUpperCase() + data.orientation.slice(1)],
     ["Tilt Angle", `${data.tiltAngle}°`],
     ["Total Panels", String(data.stats.totalPanels)],
@@ -69,6 +77,10 @@ export function exportSolarPlan(data: SolarPlanData) {
     ["Structural Load", `${data.stats.structuralLoadKgM2.toFixed(1)} kg/m²`],
     ["Inverter", data.stats.inverterSuggestion],
   ];
+
+  if (windWarning) {
+    mainData.push(["⚠ Wind Warning", windWarning]);
+  }
 
   autoTable(doc, {
     startY: yPos,
