@@ -160,6 +160,11 @@ function isBlockedByObstacle(x: number, z: number, panelW: number, panelH: numbe
 
 export default function SolarDesign3D({
   roofPolygon,
+  panelCount,
+  capacityKW,
+  dailyEnergy,
+  annualEnergy,
+  inverterSuggestion,
   tiltAngle,
   orientation,
   panelWatt,
@@ -183,16 +188,17 @@ export default function SolarDesign3D({
   const panelW = orientation === "landscape" ? panelLength : panelWidth;
   const panelH = orientation === "landscape" ? panelWidth : panelLength;
 
-  const panelPositions = useMemo(
+  // Fit panels in 3D but limit to the exact count from 2D view
+  const allPanelPositions = useMemo(
     () => fitPanelsInPolygon(localPolygon, panelW, panelH, tiltAngle, 0.15, blockers),
     [localPolygon, panelW, panelH, tiltAngle, blockers]
   );
 
-  const panelCount = panelPositions.length;
-  const capacityKW = (panelCount * panelWatt) / 1000;
-  const tiltFactor = Math.cos(((tiltAngle - 15) * Math.PI) / 180);
-  const dailyEnergy = capacityKW * 5.5 * 0.75 * Math.max(tiltFactor, 0.7);
-  const annualEnergy = dailyEnergy * 365;
+  // Use the panelCount from props (2D view) to keep both views in sync
+  const panelPositions = useMemo(
+    () => allPanelPositions.slice(0, panelCount),
+    [allPanelPositions, panelCount]
+  );
 
   const panelsPerString = Math.min(12, Math.max(8, Math.floor(600 / (panelWatt * 0.04))));
   const stringCount = Math.ceil(panelCount / panelsPerString);
