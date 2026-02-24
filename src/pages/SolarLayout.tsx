@@ -29,7 +29,7 @@ import { CompliancePanel } from "@/components/solar-layout/CompliancePanel";
 import { WalkwayPipelinePanel } from "@/components/solar-layout/WalkwayPipelinePanel";
 import { ObstaclesList } from "@/components/solar-layout/ObstaclesList";
 import { PANEL_OPTIONS, autoFitPanelsOnMap, metersToLatDeg, metersToLngDeg, shrinkPolygon } from "@/utils/solarCalculations";
-import { exportSolarPlan } from "@/utils/solarPlanExport";
+import { exportSolarPlan, capture2DLayout, capture3DLayout } from "@/utils/solarPlanExport";
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
@@ -413,21 +413,60 @@ function SolarLayoutInner({ project }: { project: any }) {
     }
   };
 
-  const handleExportPDF = () => {
-    exportSolarPlan({
-      projectName: project?.project_name || "Solar Project",
-      latitude, longitude, roofType, roofAreaM2, usableAreaM2,
-      panel: selectedPanel, orientation, tiltAngle, stats,
-      rccDetails: rccDetails, metalRoofDetails: metalRoofDetails,
-      compliance,
-      hasPerimeterWalkway, perimeterWalkwayWidth,
-      hasCentralWalkway, centralWalkwayWidth,
-      safetySetback,
-      obstacleCount: obstacles.length,
-      windZone,
-      targetCapacityKW: targetCapacityKW > 0 ? targetCapacityKW : undefined,
-    });
-    toast({ title: "PDF Exported", description: "Solar plan PDF downloaded." });
+  const [exportingPDF, setExportingPDF] = useState(false);
+
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    toast({ title: "Generating PDF...", description: "Capturing layout images. Please wait." });
+
+    try {
+      // Capture 2D layout from current map
+      const image2D = await capture2DLayout();
+
+      // Capture 3D: temporarily switch tab, wait for render, capture, switch back
+      const prevTab = activeTab;
+      let image3D: string | null = null;
+      
+      if (prevTab !== "3d") {
+        setActiveTab("3d");
+        // Wait for 3D to render
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      image3D = capture3DLayout();
+      if (prevTab !== "3d") {
+        setActiveTab(prevTab);
+      }
+
+      // Get user name for prepared by
+      const preparedBy = user ? `${(user as any).email || "Solar Engineer"}` : "Solar Engineer";
+      
+      // Get client name from project/lead
+      const clientName = project?.project_name?.split(" - ")[0] || "";
+
+      await exportSolarPlan({
+        projectName: project?.project_name || "Solar Project",
+        latitude, longitude, roofType, roofAreaM2, usableAreaM2,
+        panel: selectedPanel, orientation, tiltAngle, stats,
+        rccDetails, metalRoofDetails,
+        compliance,
+        hasPerimeterWalkway, perimeterWalkwayWidth,
+        hasCentralWalkway, centralWalkwayWidth,
+        safetySetback,
+        obstacleCount: obstacles.length,
+        windZone,
+        targetCapacityKW: targetCapacityKW > 0 ? targetCapacityKW : undefined,
+        image2D: image2D || undefined,
+        image3D: image3D || undefined,
+        preparedBy,
+        clientName,
+        previewUrl: window.location.href,
+      });
+      toast({ title: "PDF Exported", description: "Premium solar proposal PDF downloaded." });
+    } catch (err: any) {
+      toast({ title: "Export Error", description: err.message, variant: "destructive" });
+    } finally {
+      setExportingPDF(false);
+    }
   };
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
@@ -507,8 +546,9 @@ function SolarLayoutInner({ project }: { project: any }) {
             {generatingQuote ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
             Quote
           </Button>
-          <Button size="sm" variant="outline" onClick={handleExportPDF} disabled={panels.length === 0}>
-            <Download className="mr-2 h-4 w-4" /> Export PDF
+          <Button size="sm" variant="outline" onClick={handleExportPDF} disabled={exportingPDF || panels.length === 0}>
+            {exportingPDF ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {exportingPDF ? "Generating..." : "Export PDF"}
           </Button>
         </div>
       </div>
