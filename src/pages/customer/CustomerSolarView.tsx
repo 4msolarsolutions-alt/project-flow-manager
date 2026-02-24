@@ -6,6 +6,7 @@ import { GoogleMap, useJsApiLoader, Polygon, Rectangle } from "@react-google-map
 import { Loader2, Sun, Zap, Battery, BarChart3 } from "lucide-react";
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
+const LIBRARIES: ("geometry" | "places")[] = ["geometry", "places"];
 const PANEL_WATT = 550;
 
 const mapContainerStyle = { width: "100%", height: "400px", borderRadius: "12px" };
@@ -29,7 +30,7 @@ export default function CustomerSolarView() {
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: [],
+    libraries: LIBRARIES,
   });
 
   // Get first project with solar layout
