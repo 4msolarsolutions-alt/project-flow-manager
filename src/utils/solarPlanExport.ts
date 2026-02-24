@@ -518,9 +518,28 @@ export async function exportSolarPlan(data: SolarPlanData) {
 // ============ CAPTURE UTILITIES ============
 
 /**
- * Capture the Google Maps container as a high-resolution base64 PNG.
+ * Capture the 2D satellite layout using Google Maps Static API.
+ * This avoids cross-origin issues with html2canvas on Google Maps tiles.
+ * Falls back to html2canvas if Static API fails.
  */
-export async function capture2DLayout(mapContainerSelector: string = ".gm-style"): Promise<string | null> {
+export async function capture2DLayout(
+  mapContainerSelector: string = ".gm-style",
+  roofPath?: { lat: number; lng: number }[],
+  panels?: { north: number; south: number; east: number; west: number }[],
+  center?: { lat: number; lng: number },
+  apiKey?: string
+): Promise<string | null> {
+  // Method 1: Google Maps Static API (reliable satellite capture)
+  if (apiKey && center && roofPath && roofPath.length >= 3) {
+    try {
+      const img = await captureViaStaticApi(roofPath, panels || [], center, apiKey);
+      if (img) return img;
+    } catch (e) {
+      console.warn("Static API capture failed, falling back to html2canvas:", e);
+    }
+  }
+
+  // Method 2: html2canvas fallback
   try {
     const html2canvas = (await import("html2canvas")).default;
     const container = document.querySelector(mapContainerSelector);
@@ -528,7 +547,7 @@ export async function capture2DLayout(mapContainerSelector: string = ".gm-style"
     const canvas = await html2canvas(container as HTMLElement, {
       useCORS: true,
       allowTaint: true,
-      scale: 3, // High resolution for print quality
+      scale: 3,
       backgroundColor: null,
       logging: false,
       imageTimeout: 15000,
@@ -538,6 +557,62 @@ export async function capture2DLayout(mapContainerSelector: string = ".gm-style"
     console.error("2D capture failed:", e);
     return null;
   }
+}
+
+/**
+ * Use Google Maps Static API to render a satellite image with roof polygon and panel overlays.
+ */
+async function captureViaStaticApi(
+  roofPath: { lat: number; lng: number }[],
+  panels: { north: number; south: number; east: number; west: number }[],
+  center: { lat: number; lng: number },
+  apiKey: string
+): Promise<string | null> {
+  const size = "640x640";
+  const zoom = 20;
+  const maptype = "satellite";
+
+  // Encode roof polygon path
+  const roofPathStr = roofPath.map(p => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`).join("|");
+  // Close the polygon
+  const closedPath = `${roofPathStr}|${roofPath[0].lat.toFixed(6)},${roofPath[0].lng.toFixed(6)}`;
+
+  // Build panel overlay paths (show up to 60 panels to stay within URL limits)
+  const panelPaths = panels.slice(0, 60).map(p => {
+    const pts = [
+      `${p.south.toFixed(6)},${p.west.toFixed(6)}`,
+      `${p.north.toFixed(6)},${p.west.toFixed(6)}`,
+      `${p.north.toFixed(6)},${p.east.toFixed(6)}`,
+      `${p.south.toFixed(6)},${p.east.toFixed(6)}`,
+      `${p.south.toFixed(6)},${p.west.toFixed(6)}`,
+    ].join("|");
+    return `&path=color:0x1E90FFCC|fillcolor:0x1E90FF99|weight:1|${pts}`;
+  });
+
+  // Build URL
+  let url = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat.toFixed(6)},${center.lng.toFixed(6)}&zoom=${zoom}&size=${size}&maptype=${maptype}&path=color:0xFF0000FF|fillcolor:0xFFEB3B30|weight:2|${closedPath}&key=${apiKey}`;
+
+  // Add panel paths (limited to keep URL under ~8KB)
+  const panelStr = panelPaths.join("");
+  if (url.length + panelStr.length < 8100) {
+    url += panelStr;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth * 2;
+      canvas.height = img.naturalHeight * 2;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(null); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/png", 1.0));
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
 }
 
 /**
