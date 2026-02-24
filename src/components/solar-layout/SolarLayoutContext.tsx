@@ -16,6 +16,8 @@ interface SolarLayoutState {
   longitude: number;
   setLatitude: (v: number) => void;
   setLongitude: (v: number) => void;
+  address: string;
+  setAddress: (v: string) => void;
   windZone: string;
   fireComplianceRequired: boolean;
   setFireComplianceRequired: (v: boolean) => void;
@@ -116,6 +118,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   // Location
   const [latitude, setLatitude] = useState(initialLatitude);
   const [longitude, setLongitude] = useState(initialLongitude);
+  const [address, setAddress] = useState("");
   const [fireComplianceRequired, setFireComplianceRequired] = useState(false);
 
   // Roof
@@ -228,7 +231,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   }, [latitude]);
 
   const value: SolarLayoutState = {
-    latitude, longitude, setLatitude, setLongitude, windZone, fireComplianceRequired, setFireComplianceRequired,
+    latitude, longitude, setLatitude, setLongitude, address, setAddress, windZone, fireComplianceRequired, setFireComplianceRequired,
     roofType, setRoofType, structureType, setStructureType, deadLoadLimit, setDeadLoadLimit,
     purlinSpacing, setPurlinSpacing, clampType, setClampType,
     selectedPanelIdx, setSelectedPanelIdx, selectedPanel, orientation, setOrientation, tiltAngle, setTiltAngle,

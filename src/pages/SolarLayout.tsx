@@ -139,7 +139,7 @@ function SolarLayoutInner({ project }: { project: any }) {
   const navigate = useNavigate();
   const ctx = useSolarLayout();
   const {
-    latitude, longitude, setLatitude, setLongitude,
+    latitude, longitude, setLatitude, setLongitude, address, setAddress,
     selectedPanelIdx, setSelectedPanelIdx, selectedPanel,
     orientation, setOrientation,
     tiltAngle, setTiltAngle,
@@ -350,12 +350,23 @@ function SolarLayoutInner({ project }: { project: any }) {
     mapRef.current = map;
   }, []);
 
-  // Pan map when coordinates change
+  // Pan map when coordinates change + reverse geocode
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.panTo({ lat: latitude, lng: longitude });
     }
-  }, [latitude, longitude]);
+    // Reverse geocode
+    if (isLoaded && latitude && longitude) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          setAddress(results[0].formatted_address);
+        } else {
+          setAddress("");
+        }
+      });
+    }
+  }, [latitude, longitude, isLoaded, setAddress]);
 
   useEffect(() => {
     if (mapRef.current && roofPath.length > 0) {
@@ -395,10 +406,12 @@ function SolarLayoutInner({ project }: { project: any }) {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
 
-        {/* Coordinates display */}
-        <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-          <MapPin className="h-3 w-3" />
-          {latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
+        {/* Coordinates & address display */}
+        <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded max-w-md truncate">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="truncate">
+            {address ? `${address} — ` : ""}{latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
+          </span>
         </div>
 
         <div className="ml-auto flex flex-wrap gap-2">
