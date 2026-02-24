@@ -13,10 +13,9 @@ export function LocationPanel() {
   const { latitude, longitude, setLatitude, setLongitude, windZone, fireComplianceRequired, setFireComplianceRequired, tiltAngle } = useSolarLayout();
   const [pasteValue, setPasteValue] = useState("");
 
-  const handlePasteInput = (value: string) => {
-    setPasteValue(value);
-    // Try parsing "lat, lng" or "lat lng" formats
+  const parseAndSetCoords = (value: string) => {
     const cleaned = value.trim().replace(/[()]/g, "");
+    // Support "lat, lng", "lat lng", "lat,lng" and Google Maps URL formats
     const parts = cleaned.split(/[,\s]+/).filter(Boolean);
     if (parts.length >= 2) {
       const lat = parseFloat(parts[0]);
@@ -26,16 +25,35 @@ export function LocationPanel() {
         setLongitude(lng);
         toast.success(`Location set: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         setPasteValue("");
+        return true;
       }
+    }
+    return false;
+  };
+
+  const handleInputChange = (value: string) => {
+    setPasteValue(value);
+    parseAndSetCoords(value);
+  };
+
+  const handlePasteEvent = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (text && parseAndSetCoords(text)) {
+      e.preventDefault();
     }
   };
 
   const handlePasteFromClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      handlePasteInput(text);
+      if (text) {
+        setPasteValue(text);
+        if (!parseAndSetCoords(text)) {
+          toast.error("Could not parse coordinates. Use format: lat, lng");
+        }
+      }
     } catch {
-      toast.error("Unable to read clipboard. Please paste manually.");
+      toast.error("Unable to read clipboard. Please paste manually (Ctrl+V).");
     }
   };
 
@@ -53,7 +71,8 @@ export function LocationPanel() {
             type="text"
             placeholder="e.g. 13.0827, 80.2707"
             value={pasteValue}
-            onChange={(e) => handlePasteInput(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onPaste={handlePasteEvent}
             className="h-8 text-sm"
           />
         </div>
