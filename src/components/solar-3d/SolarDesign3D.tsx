@@ -1,11 +1,12 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Grid, Html, Environment, ContactShadows } from "@react-three/drei";
+import { OrbitControls, Grid, Environment, Sky } from "@react-three/drei";
+import { Building3D } from "./Building3D";
 import { Roof3D } from "./Roof3D";
 import { Panel3D } from "./Panel3D";
 import { Blocker3D, BlockerType } from "./Blocker3D";
 import { SunPath3D } from "./SunPath3D";
-import { StringZone3D, StringZone, autoGenerateStrings, getZoneColor } from "./StringZone3D";
+import { StringZone3D, autoGenerateStrings } from "./StringZone3D";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,14 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
-  Sun, Zap, Battery, BarChart3, Layers, Eye, EyeOff,
-  Clock, Box, Trash2, Plus, Cable,
+  Sun, Zap, Battery, BarChart3, Eye,
+  Clock, Box, Cable, Maximize, Minimize,
 } from "lucide-react";
 
-export interface PolygonPoint {
-  lat: number;
-  lng: number;
-}
+export interface PolygonPoint { lat: number; lng: number; }
 
 interface SolarDesign3DProps {
   roofPolygon: PolygonPoint[];
@@ -36,6 +34,7 @@ interface SolarDesign3DProps {
   panelLength: number;
   panelWidth: number;
   latitude?: number;
+  buildingHeight?: number;
 }
 
 interface BlockerItem {
@@ -45,49 +44,96 @@ interface BlockerItem {
   size: [number, number, number];
 }
 
-// Convert lat/lng polygon to local XZ coordinates (meters from centroid)
 function polygonToLocal(polygon: PolygonPoint[]): { x: number; z: number }[] {
   if (polygon.length === 0) return [];
   const centerLat = polygon.reduce((s, p) => s + p.lat, 0) / polygon.length;
   const centerLng = polygon.reduce((s, p) => s + p.lng, 0) / polygon.length;
-
   return polygon.map((p) => ({
     x: (p.lng - centerLng) * 111320 * Math.cos((centerLat * Math.PI) / 180),
     z: -(p.lat - centerLat) * 111320,
   }));
 }
 
-// Auto-fit panels inside polygon in local coords
 function fitPanelsInPolygon(
   polygon: { x: number; z: number }[],
   panelW: number,
   panelH: number,
+  tiltAngle: number,
   gap: number = 0.15,
   blockers: BlockerItem[] = []
 ): [number, number, number][] {
   if (polygon.length < 3) return [];
 
-  // Find bounding box
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   polygon.forEach((p) => {
-    minX = Math.min(minX, p.x);
-    maxX = Math.max(maxX, p.x);
-    minZ = Math.min(minZ, p.z);
-    maxZ = Math.max(maxZ, p.z);
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
   });
+
+  // Shadow-safe row spacing
+  const tiltRad = (tiltAngle * Math.PI) / 180;
+  const shadowGap = panelH * Math.tan(tiltRad);
+  const rowSpacing = panelH + Math.max(shadowGap, 0.3);
 
   const positions: [number, number, number][] = [];
   const stepX = panelW + gap;
-  const stepZ = panelH + gap;
 
+  // Collect rows
+  const rows: { z: number; panels: [number, number, number][] }[] = [];
+  for (let z = minZ + panelH / 2 + 0.3; z < maxZ - panelH / 2 - 0.3; z += rowSpacing) {
+    const rowPanels: [number, number, number][] = [];
+    for (let x = minX + panelW / 2 + 0.3; x < maxX - panelW / 2 - 0.3; x += stepX) {
+      if (isPointInPolygon(x, z, polygon) && !isBlockedByObstacle(x, z, panelW, panelH, blockers)) {
+        rowPanels.push([x, 0.15, z]);
+      }
+    }
+    if (rowPanels.length > 0) rows.push({ z, panels: rowPanels });
+  }
+
+  // Center rows vertically
+  if (rows.length > 0) {
+    const totalRowSpan = (rows.length - 1) * rowSpacing;
+    const midZ = (minZ + maxZ) / 2;
+    const startZ = midZ - totalRowSpan / 2;
+    rows.forEach((row, ri) => {
+      const newZ = startZ + ri * rowSpacing;
+      // Center panels horizontally within each row
+      const validPanels = row.panels.filter(p => isPointInPolygon(p[0], newZ, polygon));
+      if (validPanels.length > 0) {
+        const rowMinX = Math.min(...validPanels.map(p => p[0]));
+        const rowMaxX = Math.max(...validPanels.map(p => p[0]));
+        const rowWidth = rowMaxX - rowMinX;
+        const availWidth = maxX - minX - panelW - 0.6;
+        const offsetX = (availWidth - rowWidth) / 2;
+        validPanels.forEach(p => {
+          positions.push([p[0] + offsetX - (availWidth - rowWidth) / 2, p[1], newZ]);
+        });
+      }
+    });
+  }
+
+  return positions.length > 0 ? positions : fitPanelsSimple(polygon, panelW, panelH, stepX, rowSpacing, blockers);
+}
+
+function fitPanelsSimple(
+  polygon: { x: number; z: number }[],
+  panelW: number, panelH: number,
+  stepX: number, stepZ: number,
+  blockers: BlockerItem[]
+): [number, number, number][] {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  polygon.forEach((p) => {
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+  });
+  const positions: [number, number, number][] = [];
   for (let x = minX + panelW / 2; x < maxX - panelW / 2; x += stepX) {
     for (let z = minZ + panelH / 2; z < maxZ - panelH / 2; z += stepZ) {
       if (isPointInPolygon(x, z, polygon) && !isBlockedByObstacle(x, z, panelW, panelH, blockers)) {
-        positions.push([x, 0.12, z]);
+        positions.push([x, 0.15, z]);
       }
     }
   }
-
   return positions;
 }
 
@@ -102,51 +148,35 @@ function isPointInPolygon(x: number, z: number, polygon: { x: number; z: number 
   return inside;
 }
 
-function isBlockedByObstacle(
-  x: number,
-  z: number,
-  panelW: number,
-  panelH: number,
-  blockers: BlockerItem[]
-): boolean {
-  const margin = 0.3;
+function isBlockedByObstacle(x: number, z: number, panelW: number, panelH: number, blockers: BlockerItem[]): boolean {
+  const margin = 0.5;
   for (const b of blockers) {
     const bx = b.position[0], bz = b.position[2];
     const bw = b.size[0] / 2 + margin, bd = b.size[2] / 2 + margin;
-    if (
-      x + panelW / 2 > bx - bw &&
-      x - panelW / 2 < bx + bw &&
-      z + panelH / 2 > bz - bd &&
-      z - panelH / 2 < bz + bd
-    ) {
-      return true;
-    }
+    if (x + panelW / 2 > bx - bw && x - panelW / 2 < bx + bw && z + panelH / 2 > bz - bd && z - panelH / 2 < bz + bd) return true;
   }
   return false;
 }
 
 export default function SolarDesign3D({
   roofPolygon,
-  panelCount: _propPanelCount,
-  capacityKW: _propCapacity,
-  dailyEnergy: _propDaily,
-  annualEnergy: _propAnnual,
-  inverterSuggestion: _propInverter,
   tiltAngle,
   orientation,
   panelWatt,
   panelLength,
   panelWidth,
   latitude = 13.08,
+  buildingHeight = 6,
 }: SolarDesign3DProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [sunHour, setSunHour] = useState(12);
-  const [dayOfYear, setDayOfYear] = useState(172); // Summer solstice
+  const [dayOfYear, setDayOfYear] = useState(172);
   const [showShadows, setShowShadows] = useState(true);
   const [showSunPath, setShowSunPath] = useState(true);
   const [showStrings, setShowStrings] = useState(false);
-  const [showGrid, setShowGrid] = useState(true);
+  const [showBuilding, setShowBuilding] = useState(true);
   const [blockers, setBlockers] = useState<BlockerItem[]>([]);
-  const [addingBlocker, setAddingBlocker] = useState<BlockerType | null>(null);
 
   const localPolygon = useMemo(() => polygonToLocal(roofPolygon), [roofPolygon]);
 
@@ -154,8 +184,8 @@ export default function SolarDesign3D({
   const panelH = orientation === "landscape" ? panelWidth : panelLength;
 
   const panelPositions = useMemo(
-    () => fitPanelsInPolygon(localPolygon, panelW, panelH, 0.15, blockers),
-    [localPolygon, panelW, panelH, blockers]
+    () => fitPanelsInPolygon(localPolygon, panelW, panelH, tiltAngle, 0.15, blockers),
+    [localPolygon, panelW, panelH, tiltAngle, blockers]
   );
 
   const panelCount = panelPositions.length;
@@ -164,17 +194,14 @@ export default function SolarDesign3D({
   const dailyEnergy = capacityKW * 5.5 * 0.75 * Math.max(tiltFactor, 0.7);
   const annualEnergy = dailyEnergy * 365;
 
-  // String sizing
   const panelsPerString = Math.min(12, Math.max(8, Math.floor(600 / (panelWatt * 0.04))));
   const stringCount = Math.ceil(panelCount / panelsPerString);
-  const mpptCount = Math.ceil(stringCount / 2);
 
   const strings = useMemo(
     () => autoGenerateStrings(panelCount, panelWatt, panelsPerString),
     [panelCount, panelWatt, panelsPerString]
   );
 
-  // Inverter matching
   const inverterMatch = useMemo(() => {
     if (capacityKW <= 3) return { model: "3kW Single-phase", count: 1, mppt: 1 };
     if (capacityKW <= 5) return { model: "5kW Single-phase", count: 1, mppt: 2 };
@@ -198,7 +225,6 @@ export default function SolarDesign3D({
   }, [localPolygon]);
 
   const addBlocker = useCallback((type: BlockerType) => {
-    const id = `blocker-${Date.now()}`;
     const sizes: Record<BlockerType, [number, number, number]> = {
       water_tank: [1.5, 1.2, 1.5],
       lift_room: [3, 3, 3],
@@ -208,20 +234,29 @@ export default function SolarDesign3D({
     };
     setBlockers((prev) => [
       ...prev,
-      { id, type, position: [0, sizes[type][1] / 2, 0], size: sizes[type] },
+      { id: `blocker-${Date.now()}`, type, position: [0, sizes[type][1] / 2, 0], size: sizes[type] },
     ]);
-    setAddingBlocker(null);
   }, []);
 
-  const removeBlocker = useCallback((id: string) => {
-    setBlockers((prev) => prev.filter((b) => b.id !== id));
-  }, []);
-
+  const removeBlocker = useCallback((id: string) => setBlockers((prev) => prev.filter((b) => b.id !== id)), []);
   const updateBlockerPosition = useCallback((id: string, newPosition: [number, number, number]) => {
-    setBlockers((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, position: newPosition } : b))
-    );
+    setBlockers((prev) => prev.map((b) => (b.id === id ? { ...b, position: newPosition } : b)));
   }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  }, []);
+
+  // Month label from day of year
+  const monthLabel = useMemo(() => {
+    const d = new Date(2024, 0, dayOfYear);
+    return d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+  }, [dayOfYear]);
 
   if (roofPolygon.length < 3) {
     return (
@@ -232,53 +267,39 @@ export default function SolarDesign3D({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={containerRef}>
       {/* 3D Controls */}
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Sun Time */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Clock className="h-4 w-4" /> Sun Time: {sunHour}:00
+              <Clock className="h-4 w-4" /> Sun Time: {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, '0')}
             </Label>
-            <Slider
-              value={[sunHour]}
-              onValueChange={(v) => setSunHour(v[0])}
-              min={6}
-              max={18}
-              step={0.5}
-            />
+            <Slider value={[sunHour]} onValueChange={(v) => setSunHour(v[0])} min={5} max={19} step={0.25} />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>6 AM</span><span>12 PM</span><span>6 PM</span>
+              <span>5 AM</span><span>12 PM</span><span>7 PM</span>
             </div>
           </div>
 
           {/* Day of Year */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Sun className="h-4 w-4" /> Day of Year: {dayOfYear}
+              <Sun className="h-4 w-4" /> Date: {monthLabel}
             </Label>
-            <Slider
-              value={[dayOfYear]}
-              onValueChange={(v) => setDayOfYear(v[0])}
-              min={1}
-              max={365}
-              step={1}
-            />
+            <Slider value={[dayOfYear]} onValueChange={(v) => setDayOfYear(v[0])} min={1} max={365} step={1} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Jan</span><span>Jun</span><span>Dec</span>
             </div>
           </div>
 
-          {/* Blockers */}
+          {/* Obstacles */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Box className="h-4 w-4" /> Obstacles
+              <Box className="h-4 w-4" /> Roof Obstacles
             </Label>
-            <Select value={addingBlocker || ""} onValueChange={(v) => addBlocker(v as BlockerType)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Add obstacle..." />
-              </SelectTrigger>
+            <Select onValueChange={(v) => addBlocker(v as BlockerType)}>
+              <SelectTrigger><SelectValue placeholder="Add obstacle..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="water_tank">Water Tank</SelectItem>
                 <SelectItem value="lift_room">Lift Room</SelectItem>
@@ -303,16 +324,20 @@ export default function SolarDesign3D({
             <Label className="text-sm font-medium">Visibility</Label>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <Switch checked={showShadows} onCheckedChange={setShowShadows} id="shadows" />
-                <Label htmlFor="shadows" className="text-xs">Shadows</Label>
+                <Switch checked={showShadows} onCheckedChange={setShowShadows} id="shadows3d" />
+                <Label htmlFor="shadows3d" className="text-xs">Shadows</Label>
               </div>
               <div className="flex items-center gap-2">
-                <Switch checked={showSunPath} onCheckedChange={setShowSunPath} id="sunpath" />
-                <Label htmlFor="sunpath" className="text-xs">Sun Path</Label>
+                <Switch checked={showSunPath} onCheckedChange={setShowSunPath} id="sunpath3d" />
+                <Label htmlFor="sunpath3d" className="text-xs">Sun Path</Label>
               </div>
               <div className="flex items-center gap-2">
-                <Switch checked={showStrings} onCheckedChange={setShowStrings} id="strings" />
-                <Label htmlFor="strings" className="text-xs flex items-center gap-1"><Cable className="h-3 w-3" /> Strings</Label>
+                <Switch checked={showBuilding} onCheckedChange={setShowBuilding} id="building3d" />
+                <Label htmlFor="building3d" className="text-xs">Building Walls</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={showStrings} onCheckedChange={setShowStrings} id="strings3d" />
+                <Label htmlFor="strings3d" className="text-xs flex items-center gap-1"><Cable className="h-3 w-3" /> Strings</Label>
               </div>
             </div>
           </div>
@@ -320,16 +345,44 @@ export default function SolarDesign3D({
       </Card>
 
       {/* 3D Canvas */}
-      <Card className="overflow-hidden">
-        <div style={{ width: "100%", height: "500px" }}>
+      <Card className="overflow-hidden relative">
+        <Button
+          size="icon"
+          variant="secondary"
+          className="absolute top-3 right-3 z-10 h-8 w-8"
+          onClick={toggleFullscreen}
+        >
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+        </Button>
+
+        <div style={{ width: "100%", height: isFullscreen ? "100vh" : "600px" }}>
           <Canvas
             shadows={showShadows}
-            camera={{ position: [sceneRadius * 0.8, sceneRadius * 0.6, sceneRadius * 0.8], fov: 50 }}
-            gl={{ antialias: true, toneMapping: 3, preserveDrawingBuffer: true }}
+            camera={{ position: [sceneRadius * 0.7, sceneRadius * 0.5 + buildingHeight, sceneRadius * 0.7], fov: 50 }}
+            gl={{
+              antialias: true,
+              toneMapping: 3,
+              preserveDrawingBuffer: true,
+              alpha: false,
+              powerPreference: "high-performance",
+            }}
+            dpr={[1, 2]}
           >
-            <color attach="background" args={["#87CEEB"]} />
-            <ambientLight intensity={0.4} />
-            
+            {/* Sky */}
+            <Sky
+              distance={450000}
+              sunPosition={[
+                sceneRadius * Math.cos(((sunHour - 12) * 15 * Math.PI) / 180),
+                sceneRadius * Math.sin(Math.max(0.1, (sunHour - 6) / 12 * Math.PI / 2)),
+                -sceneRadius * 0.5,
+              ]}
+              inclination={0.5}
+              azimuth={0.25}
+              rayleigh={0.5}
+            />
+
+            <ambientLight intensity={0.25} color="#B3E5FC" />
+
             {showSunPath && (
               <SunPath3D
                 hour={sunHour}
@@ -341,53 +394,64 @@ export default function SolarDesign3D({
             )}
 
             {!showSunPath && (
-              <directionalLight
-                position={[10, 15, 10]}
-                intensity={1.2}
-                castShadow={showShadows}
-              />
+              <>
+                <directionalLight position={[10, 15, 10]} intensity={1.5} castShadow={showShadows} />
+                <hemisphereLight args={["#87CEEB", "#4a7c59", 0.3]} />
+              </>
             )}
 
-            {/* Ground */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-              <planeGeometry args={[sceneRadius * 3, sceneRadius * 3]} />
-              <meshStandardMaterial color="#4a7c59" roughness={0.9} />
+            {/* Ground plane with realistic texture */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -buildingHeight - 0.01, 0]} receiveShadow>
+              <planeGeometry args={[sceneRadius * 4, sceneRadius * 4]} />
+              <meshStandardMaterial color="#6b8c5a" roughness={0.95} metalness={0} />
             </mesh>
 
-            {showGrid && (
-              <Grid
-                position={[0, 0.01, 0]}
-                args={[sceneRadius * 2, sceneRadius * 2]}
-                cellSize={1}
-                cellThickness={0.5}
-                cellColor="#555"
-                sectionSize={5}
-                sectionThickness={1}
-                sectionColor="#888"
-                fadeDistance={sceneRadius * 2}
-                fadeStrength={1}
-                followCamera={false}
+            {/* Surrounding area / context */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -buildingHeight, 0]} receiveShadow>
+              <planeGeometry args={[sceneRadius * 8, sceneRadius * 8]} />
+              <meshStandardMaterial color="#7a9568" roughness={1} metalness={0} />
+            </mesh>
+
+            {/* Grid on roof level */}
+            <Grid
+              position={[0, 0.02, 0]}
+              args={[sceneRadius * 2, sceneRadius * 2]}
+              cellSize={1}
+              cellThickness={0.3}
+              cellColor="#666"
+              sectionSize={5}
+              sectionThickness={0.8}
+              sectionColor="#999"
+              fadeDistance={sceneRadius * 1.5}
+              fadeStrength={1}
+              followCamera={false}
+            />
+
+            {/* Building with walls and parapet */}
+            {showBuilding && (
+              <Building3D
+                polygon={localPolygon}
+                buildingHeight={buildingHeight}
+                parapetHeight={0.9}
+                roofThickness={0.15}
               />
             )}
 
-            {/* Roof */}
-            <Roof3D polygon={localPolygon} height={0.1} />
+            {/* Roof slab fallback when building walls hidden */}
+            {!showBuilding && <Roof3D polygon={localPolygon} height={0.15} />}
 
             {/* Panels */}
-            {panelPositions.map((pos, i) => {
-              const stringZone = showStrings ? strings.find((s) => s.panelIndices.includes(i)) : null;
-              return (
-                <Panel3D
-                  key={i}
-                  position={pos}
-                  width={panelLength}
-                  height={panelWidth}
-                  tiltAngle={tiltAngle}
-                  orientation={orientation}
-                  selected={!!stringZone}
-                />
-              );
-            })}
+            {panelPositions.map((pos, i) => (
+              <Panel3D
+                key={i}
+                position={pos}
+                width={panelLength}
+                height={panelWidth}
+                tiltAngle={tiltAngle}
+                orientation={orientation}
+                selected={showStrings ? !!strings.find((s) => s.panelIndices.includes(i)) : false}
+              />
+            ))}
 
             {/* Blockers */}
             {blockers.map((b) => (
@@ -402,23 +466,18 @@ export default function SolarDesign3D({
             ))}
 
             {/* String Zones */}
-            {showStrings &&
-              strings.map((zone) => (
-                <StringZone3D
-                  key={zone.id}
-                  zone={zone}
-                  panelPositions={panelPositions}
-                  visible={showStrings}
-                />
-              ))}
+            {showStrings && strings.map((zone) => (
+              <StringZone3D key={zone.id} zone={zone} panelPositions={panelPositions} visible={showStrings} />
+            ))}
 
             <OrbitControls
               enablePan
               enableZoom
               enableRotate
               maxPolarAngle={Math.PI / 2.05}
-              minDistance={3}
-              maxDistance={sceneRadius * 3}
+              minDistance={2}
+              maxDistance={sceneRadius * 4}
+              target={[0, 0, 0]}
             />
           </Canvas>
         </div>

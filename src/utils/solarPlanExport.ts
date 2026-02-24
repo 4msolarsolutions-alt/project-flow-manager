@@ -518,7 +518,7 @@ export async function exportSolarPlan(data: SolarPlanData) {
 // ============ CAPTURE UTILITIES ============
 
 /**
- * Capture the Google Maps container as a base64 PNG image using html2canvas.
+ * Capture the Google Maps container as a high-resolution base64 PNG.
  */
 export async function capture2DLayout(mapContainerSelector: string = ".gm-style"): Promise<string | null> {
   try {
@@ -528,11 +528,12 @@ export async function capture2DLayout(mapContainerSelector: string = ".gm-style"
     const canvas = await html2canvas(container as HTMLElement, {
       useCORS: true,
       allowTaint: true,
-      scale: 2, // High resolution
+      scale: 3, // High resolution for print quality
       backgroundColor: null,
       logging: false,
+      imageTimeout: 15000,
     });
-    return canvas.toDataURL("image/png");
+    return canvas.toDataURL("image/png", 1.0);
   } catch (e) {
     console.error("2D capture failed:", e);
     return null;
@@ -540,22 +541,22 @@ export async function capture2DLayout(mapContainerSelector: string = ".gm-style"
 }
 
 /**
- * Capture the Three.js canvas as a base64 PNG from the 3D tab.
+ * Capture the Three.js canvas as a high-resolution base64 PNG.
+ * Looks for WebGL canvas and extracts at native resolution.
  */
 export function capture3DLayout(): string | null {
   try {
     const canvases = document.querySelectorAll("canvas");
-    // Find the Three.js canvas (usually has webgl context)
     for (const canvas of canvases) {
       const ctx = canvas.getContext("webgl2") || canvas.getContext("webgl");
       if (ctx) {
-        // Three.js canvas found — need to re-render to get pixels
-        return canvas.toDataURL("image/png");
+        // Found the Three.js WebGL canvas
+        return canvas.toDataURL("image/png", 1.0);
       }
     }
-    // Fallback: last canvas element
+    // Fallback: last canvas
     if (canvases.length > 0) {
-      return canvases[canvases.length - 1].toDataURL("image/png");
+      return canvases[canvases.length - 1].toDataURL("image/png", 1.0);
     }
     return null;
   } catch (e) {
