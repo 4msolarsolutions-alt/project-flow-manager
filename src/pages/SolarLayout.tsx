@@ -420,8 +420,14 @@ function SolarLayoutInner({ project }: { project: any }) {
     toast({ title: "Generating PDF...", description: "Capturing layout images. Please wait." });
 
     try {
-      // Capture 2D layout from current map
-      const image2D = await capture2DLayout();
+      // Capture 2D layout using Static API with satellite imagery + panel overlays
+      const image2D = await capture2DLayout(
+        ".gm-style",
+        roofPath,
+        panels,
+        { lat: latitude, lng: longitude },
+        GOOGLE_MAPS_API_KEY
+      );
 
       // Capture 3D: temporarily switch tab, wait for render, capture, switch back
       const prevTab = activeTab;
