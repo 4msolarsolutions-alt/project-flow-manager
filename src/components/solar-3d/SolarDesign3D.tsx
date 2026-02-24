@@ -70,47 +70,57 @@ function fitPanelsInPolygon(
     minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
   });
 
-  // Shadow-safe row spacing
   const tiltRad = (tiltAngle * Math.PI) / 180;
   const shadowGap = panelH * Math.tan(tiltRad);
   const rowSpacing = panelH + Math.max(shadowGap, 0.3);
-
-  const positions: [number, number, number][] = [];
   const stepX = panelW + gap;
+  const margin = 0.3;
 
-  // Collect rows
-  const rows: { z: number; panels: [number, number, number][] }[] = [];
-  for (let z = minZ + panelH / 2 + 0.3; z < maxZ - panelH / 2 - 0.3; z += rowSpacing) {
+  // Phase 1: Scan all valid positions grouped by row
+  const rows: [number, number, number][][] = [];
+  for (let z = minZ + panelH / 2 + margin; z < maxZ - panelH / 2 - margin; z += rowSpacing) {
     const rowPanels: [number, number, number][] = [];
-    for (let x = minX + panelW / 2 + 0.3; x < maxX - panelW / 2 - 0.3; x += stepX) {
+    for (let x = minX + panelW / 2 + margin; x < maxX - panelW / 2 - margin; x += stepX) {
       if (isPointInPolygon(x, z, polygon) && !isBlockedByObstacle(x, z, panelW, panelH, blockers)) {
         rowPanels.push([x, 0.15, z]);
       }
     }
-    if (rowPanels.length > 0) rows.push({ z, panels: rowPanels });
+    if (rowPanels.length > 0) rows.push(rowPanels);
   }
 
-  // Center rows vertically
-  if (rows.length > 0) {
-    const totalRowSpan = (rows.length - 1) * rowSpacing;
-    const midZ = (minZ + maxZ) / 2;
-    const startZ = midZ - totalRowSpan / 2;
-    rows.forEach((row, ri) => {
-      const newZ = startZ + ri * rowSpacing;
-      // Center panels horizontally within each row
-      const validPanels = row.panels.filter(p => isPointInPolygon(p[0], newZ, polygon));
-      if (validPanels.length > 0) {
-        const rowMinX = Math.min(...validPanels.map(p => p[0]));
-        const rowMaxX = Math.max(...validPanels.map(p => p[0]));
-        const rowWidth = rowMaxX - rowMinX;
-        const availWidth = maxX - minX - panelW - 0.6;
-        const offsetX = (availWidth - rowWidth) / 2;
-        validPanels.forEach(p => {
-          positions.push([p[0] + offsetX - (availWidth - rowWidth) / 2, p[1], newZ]);
-        });
+  if (rows.length === 0) return fitPanelsSimple(polygon, panelW, panelH, stepX, rowSpacing, blockers);
+
+  // Phase 2: Build uniform rectangular block
+  // Use median row count for uniform width
+  const counts = rows.map(r => r.length).sort((a, b) => a - b);
+  const uniformPerRow = counts[Math.floor(counts.length / 2)];
+
+  // Filter rows that can hold uniform count
+  const validRows = rows.filter(r => r.length >= uniformPerRow);
+  if (validRows.length === 0) return fitPanelsSimple(polygon, panelW, panelH, stepX, rowSpacing, blockers);
+
+  // Center rows vertically on the roof
+  const totalRowSpan = (validRows.length - 1) * rowSpacing;
+  const midZ = (minZ + maxZ) / 2;
+  const startZ = midZ - totalRowSpan / 2;
+
+  const positions: [number, number, number][] = [];
+  // Find the horizontal center from the widest valid row
+  const refRow = validRows.reduce((best, r) => r.length > best.length ? r : best, validRows[0]);
+  const refMinX = Math.min(...refRow.map(p => p[0]));
+  const refMaxX = Math.max(...refRow.map(p => p[0]));
+  const blockCenterX = (refMinX + refMaxX) / 2;
+  const blockHalfW = ((uniformPerRow - 1) * stepX) / 2;
+
+  validRows.forEach((row, ri) => {
+    const newZ = startZ + ri * rowSpacing;
+    for (let ci = 0; ci < uniformPerRow; ci++) {
+      const x = blockCenterX - blockHalfW + ci * stepX;
+      if (isPointInPolygon(x, newZ, polygon)) {
+        positions.push([x, 0.15, newZ]);
       }
-    });
-  }
+    }
+  });
 
   return positions.length > 0 ? positions : fitPanelsSimple(polygon, panelW, panelH, stepX, rowSpacing, blockers);
 }

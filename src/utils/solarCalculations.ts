@@ -481,42 +481,56 @@ export function autoFitPanelsOnMap(
 
   if (allCells.length === 0) return [];
 
-  // Phase 2: Group by row, sort rows, center each row
+  // Phase 2: Group by row, sort rows
   const rowMap = new Map<number, typeof allCells>();
   allCells.forEach(c => {
     if (!rowMap.has(c.row)) rowMap.set(c.row, []);
     rowMap.get(c.row)!.push(c);
   });
 
-  // Sort rows from south to north
+  // Sort rows from south to north, columns left to right
   const sortedRows = Array.from(rowMap.entries())
     .sort((a, b) => a[0] - b[0])
     .map(([, cells]) => cells.sort((a, b) => a.col - b.col));
 
-  // Find the maximum panels per row for uniform block
-  const maxPerRow = Math.max(...sortedRows.map(r => r.length));
+  if (sortedRows.length === 0) return [];
 
-  // Phase 3: Build centered, rectangular panel array
-  const panels: { north: number; south: number; east: number; west: number }[] = [];
-  let placed = 0;
+  // Phase 3: Build a PERFECT rectangular block
+  // Find the uniform panel count per row (use the minimum across all rows for a clean rectangle)
+  const panelsPerRowCounts = sortedRows.map(r => r.length);
+  // Use the median row width for best utilization, but cap jagged rows
+  const sortedCounts = [...panelsPerRowCounts].sort((a, b) => a - b);
+  const medianPerRow = sortedCounts[Math.floor(sortedCounts.length / 2)];
+  // Use median as the uniform width — rows shorter than this are excluded
+  const uniformPerRow = medianPerRow;
+
+  // Filter rows that can fit the uniform count
+  const validRows = sortedRows.filter(r => r.length >= uniformPerRow);
 
   // Determine how many rows we need for target
   const rowsNeeded = targetKW && targetKW > 0
-    ? Math.ceil(maxPanelsNeeded / maxPerRow)
-    : sortedRows.length;
+    ? Math.ceil(maxPanelsNeeded / uniformPerRow)
+    : validRows.length;
 
-  // Center rows vertically: skip excess rows from top/bottom
-  const rowStart = Math.max(0, Math.floor((sortedRows.length - rowsNeeded) / 2));
-  const rowEnd = Math.min(sortedRows.length, rowStart + rowsNeeded);
+  // How many panels per row for target (may be less than uniformPerRow in last row)
+  const perRowForTarget = targetKW && targetKW > 0
+    ? Math.min(uniformPerRow, maxPanelsNeeded)
+    : uniformPerRow;
+
+  // Center rows vertically
+  const actualRows = Math.min(validRows.length, rowsNeeded);
+  const rowStart = Math.max(0, Math.floor((validRows.length - actualRows) / 2));
+  const rowEnd = rowStart + actualRows;
+
+  const panels: { north: number; south: number; east: number; west: number }[] = [];
+  let placed = 0;
 
   for (let ri = rowStart; ri < rowEnd && placed < maxPanelsNeeded; ri++) {
-    const row = sortedRows[ri];
-    if (row.length === 0) continue;
+    const row = validRows[ri];
+    // Number of panels this row
+    const panelsInRow = Math.min(perRowForTarget, maxPanelsNeeded - placed);
 
-    // Determine panels to place in this row (min of available, maxPerRow, remaining)
-    const panelsInRow = Math.min(row.length, maxPanelsNeeded - placed);
-
-    // Center horizontally: skip excess columns from left/right
+    // Center horizontally within the row
     const colStart = Math.floor((row.length - panelsInRow) / 2);
     const colEnd = colStart + panelsInRow;
 
