@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker, Polyline, Autocomplete } from "@react-google-maps/api";
 import {
   Loader2, Save, Sun, Zap, ArrowLeft, RotateCw, Ruler,
-  FileText, Map, Box, Download, MapPin,
+  FileText, Map, Box, Download, MapPin, Grid3X3,
 } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
@@ -159,6 +159,9 @@ function SolarLayoutInner({ project }: { project: any }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [manualRows, setManualRows] = useState<number | "">("");
+  const [manualRowSpacing, setManualRowSpacing] = useState<number | "">("");
+  const [manualPanelsPerRow, setManualPanelsPerRow] = useState<number | "">("");
   const [generatingQuote, setGeneratingQuote] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -193,7 +196,51 @@ function SolarLayoutInner({ project }: { project: any }) {
     toast({ title: "Auto Fill Complete", description: `${result.length} panels placed.` });
   }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast]);
 
-  // Re-fit when key params change
+  // Manual panel placement with user-defined rows, panels/row, and spacing
+  const doManualFill = useCallback(() => {
+    if (roofPath.length < 3 || !isLoaded) {
+      toast({ title: "Draw a roof first", variant: "destructive" });
+      return;
+    }
+    const rows = Number(manualRows) || stats.totalRows || 3;
+    const perRow = Number(manualPanelsPerRow) || stats.panelsPerRow || 5;
+    const spacingM = Number(manualRowSpacing) || stats.rowSpacingM || 0.5;
+
+    const usePath = safetyBoundary.length >= 3 ? safetyBoundary : roofPath;
+    const bounds = new google.maps.LatLngBounds();
+    usePath.forEach((p) => bounds.extend(p));
+    const ne = bounds.getNorthEast();
+    const sw = bounds.getSouthWest();
+    const centerLat = (ne.lat() + sw.lat()) / 2;
+
+    const panelH = orientation === "landscape" ? selectedPanel.width : selectedPanel.length;
+    const panelW = orientation === "landscape" ? selectedPanel.length : selectedPanel.width;
+
+    const panelLatSize = metersToLatDeg(panelH);
+    const rowLatSize = metersToLatDeg(panelH + spacingM);
+    const panelLngSize = metersToLngDeg(panelW + 0.1, centerLat);
+
+    const poly = new google.maps.Polygon({ paths: usePath });
+    const result: { north: number; south: number; east: number; west: number }[] = [];
+
+    for (let r = 0; r < rows; r++) {
+      const rowLat = sw.lat() + r * rowLatSize;
+      for (let c = 0; c < perRow; c++) {
+        const colLng = sw.lng() + c * panelLngSize;
+        const center = new google.maps.LatLng(rowLat + panelLatSize / 2, colLng + panelLngSize / 2);
+        if (google.maps.geometry?.poly?.containsLocation(center, poly)) {
+          result.push({
+            north: rowLat + panelLatSize,
+            south: rowLat,
+            east: colLng + metersToLngDeg(panelW, centerLat),
+            west: colLng,
+          });
+        }
+      }
+    }
+    setPanels(result);
+    toast({ title: "Manual Fill Complete", description: `${result.length} panels placed (${rows} rows × ${perRow} per row, ${spacingM}m spacing).` });
+  }, [roofPath, safetyBoundary, orientation, selectedPanel, isLoaded, manualRows, manualPanelsPerRow, manualRowSpacing, stats, setPanels, toast]);
   useEffect(() => {
     if (roofPath.length >= 3 && isLoaded) {
       const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines);
@@ -206,14 +253,35 @@ function SolarLayoutInner({ project }: { project: any }) {
     if (!e.latLng) return;
     const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
 
-    if (activeTool === "roof") {
+    if (activeTool === "roof" || activeTool === "walkway" || activeTool === "pipeline" || activeTool === "safety_edge") {
       setDrawPoints([...drawPoints, pt]);
+    } else if (activeTool === "obstacle") {
+      // Place obstacle at clicked point
+      const obs: import("@/utils/solarCalculations").ObstacleItem = {
+        id: crypto.randomUUID(),
+        type: "custom",
+        position: [
+          (pt.lng - longitude) * 111320 * Math.cos((latitude * Math.PI) / 180),
+          1.5,
+          (pt.lat - latitude) * 111320,
+        ],
+        length: 1.5,
+        width: 1.5,
+        height: 1.5,
+        label: `Obstacle ${ctx.obstacles.length + 1}`,
+      };
+      ctx.addObstacle(obs);
+      toast({ title: "Obstacle Added", description: `Placed at ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
+      setActiveTool("none");
+    } else if (activeTool === "drain") {
+      setDrawPoints([...drawPoints, pt]);
+      toast({ title: "Drain Point Placed", description: `At ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
+      setActiveTool("none");
     } else if (activeTool === "none") {
-      // Update coordinates from click
       setLatitude(pt.lat);
       setLongitude(pt.lng);
     }
-  }, [activeTool, setDrawPoints, setLatitude, setLongitude]);
+  }, [activeTool, drawPoints, setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool]);
 
   const finishDrawing = useCallback(() => {
     if (activeTool === "roof") {
@@ -222,15 +290,23 @@ function SolarLayoutInner({ project }: { project: any }) {
         return;
       }
       setRoofPath(drawPoints);
-      // Update lat/lng to center of roof
       const centerLat = drawPoints.reduce((s, p) => s + p.lat, 0) / drawPoints.length;
       const centerLng = drawPoints.reduce((s, p) => s + p.lng, 0) / drawPoints.length;
       setLatitude(centerLat);
       setLongitude(centerLng);
+    } else if (activeTool === "walkway" && drawPoints.length >= 2) {
+      ctx.setWalkways([...ctx.walkways, { id: crypto.randomUUID(), type: "custom", width: 0.6, path: drawPoints }]);
+      toast({ title: "Walkway Added" });
+    } else if (activeTool === "pipeline" && drawPoints.length >= 2) {
+      ctx.setPipelines([...ctx.pipelines, { id: crypto.randomUUID(), width: 0.15, clearance: 0.3, path: drawPoints }]);
+      toast({ title: "Pipeline Added" });
+    } else if (activeTool === "safety_edge" && drawPoints.length >= 3) {
+      ctx.setSafetySetback(0.6);
+      toast({ title: "Safety Edge Updated" });
     }
     setDrawPoints([]);
     setActiveTool("none");
-  }, [activeTool, drawPoints, setRoofPath, setDrawPoints, setActiveTool, setLatitude, setLongitude, toast]);
+  }, [activeTool, drawPoints, setRoofPath, setDrawPoints, setActiveTool, setLatitude, setLongitude, toast, ctx]);
 
   const handleClear = () => {
     setRoofPath([]);
@@ -472,6 +548,58 @@ function SolarLayoutInner({ project }: { project: any }) {
               <span>0° flat</span><span>15° optimal</span><span>45° steep</span>
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* Manual Row & Spacing Controls */}
+      <Card className="p-3 mb-3">
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Manual Panel Layout</Label>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-1 min-w-[120px]">
+              <Label className="text-xs">Number of Rows</Label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                placeholder={String(stats.totalRows || "Auto")}
+                value={manualRows}
+                onChange={(e) => setManualRows(e.target.value ? Number(e.target.value) : "")}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="flex flex-col gap-1 min-w-[140px]">
+              <Label className="text-xs">Panels per Row</Label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                placeholder={String(stats.panelsPerRow || "Auto")}
+                value={manualPanelsPerRow}
+                onChange={(e) => setManualPanelsPerRow(e.target.value ? Number(e.target.value) : "")}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="flex flex-col gap-1 min-w-[150px]">
+              <Label className="text-xs">Row Spacing (meters)</Label>
+              <input
+                type="number"
+                min={0.1}
+                max={5}
+                step={0.1}
+                placeholder={stats.rowSpacingM?.toFixed(1) || "Auto"}
+                value={manualRowSpacing}
+                onChange={(e) => setManualRowSpacing(e.target.value ? Number(e.target.value) : "")}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <Button size="sm" className="h-8" onClick={doManualFill} disabled={roofPath.length < 3}>
+              <Grid3X3 className="mr-1.5 h-3.5 w-3.5" /> Apply Layout
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Leave blank to auto-calculate. Current: {stats.totalRows} rows × {stats.panelsPerRow} panels/row, {stats.rowSpacingM.toFixed(2)}m spacing
+          </p>
         </div>
       </Card>
 
