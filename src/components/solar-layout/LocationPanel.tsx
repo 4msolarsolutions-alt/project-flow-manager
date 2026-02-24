@@ -1,19 +1,67 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Wind, Flame } from "lucide-react";
+import { MapPin, Wind, Flame, ClipboardPaste } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useSolarLayout } from "./SolarLayoutContext";
 
 export function LocationPanel() {
   const { latitude, longitude, setLatitude, setLongitude, windZone, fireComplianceRequired, setFireComplianceRequired, tiltAngle } = useSolarLayout();
+  const [pasteValue, setPasteValue] = useState("");
+
+  const handlePasteInput = (value: string) => {
+    setPasteValue(value);
+    // Try parsing "lat, lng" or "lat lng" formats
+    const cleaned = value.trim().replace(/[()]/g, "");
+    const parts = cleaned.split(/[,\s]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        setLatitude(lat);
+        setLongitude(lng);
+        toast.success(`Location set: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        setPasteValue("");
+      }
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      handlePasteInput(text);
+    } catch {
+      toast.error("Unable to read clipboard. Please paste manually.");
+    }
+  };
 
   return (
     <Card className="p-4 space-y-3">
       <h3 className="text-sm font-semibold flex items-center gap-2">
         <MapPin className="h-4 w-4 text-primary" /> Location & Coordinates
       </h3>
+
+      {/* Paste-friendly input */}
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 space-y-1">
+          <Label className="text-xs">Paste Coordinates (lat, lng)</Label>
+          <Input
+            type="text"
+            placeholder="e.g. 13.0827, 80.2707"
+            value={pasteValue}
+            onChange={(e) => handlePasteInput(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+        <Button variant="outline" size="sm" className="h-8" onClick={handlePasteFromClipboard}>
+          <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Paste
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Latitude</Label>
