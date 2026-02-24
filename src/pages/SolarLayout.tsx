@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker, Polyline, Autocomplete } from "@react-google-maps/api";
 import {
   Loader2, Save, Sun, Zap, ArrowLeft, RotateCw, Ruler,
-  FileText, Map, Box, Download, MapPin, Grid3X3,
+  FileText, Map, Box, Download, MapPin, Grid3X3, AlertTriangle,
 } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
@@ -151,6 +151,7 @@ function SolarLayoutInner({ project }: { project: any }) {
     stats, rccDetails, metalRoofDetails, compliance, roofAreaM2, usableAreaM2,
     hasPerimeterWalkway, perimeterWalkwayWidth, hasCentralWalkway, centralWalkwayWidth,
     roofType, windZone,
+    targetCapacityKW, setTargetCapacityKW, capacityExceedsRoof,
   } = ctx;
 
   const { createQuotation } = useQuotations();
@@ -191,10 +192,15 @@ function SolarLayoutInner({ project }: { project: any }) {
   // Auto-fill panels
   const doAutoFill = useCallback(() => {
     if (roofPath.length < 3 || !isLoaded) return;
-    const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines);
+    const target = targetCapacityKW > 0 ? targetCapacityKW : undefined;
+    const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target);
     setPanels(result);
-    toast({ title: "Auto Fill Complete", description: `${result.length} panels placed.` });
-  }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast]);
+    if (target && result.length < Math.ceil((target * 1000) / selectedPanel.watt)) {
+      toast({ title: "⚠️ Capacity Limited", description: `Target ${target} kW exceeds usable rooftop area. Placed ${result.length} panels (${((result.length * selectedPanel.watt) / 1000).toFixed(2)} kWp).`, variant: "destructive" });
+    } else {
+      toast({ title: "Auto Fill Complete", description: `${result.length} panels placed${target ? ` for ${target} kW target` : ""}.` });
+    }
+  }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast, targetCapacityKW]);
 
   // Manual panel placement with user-defined rows, panels/row, and spacing
   const doManualFill = useCallback(() => {
@@ -243,10 +249,11 @@ function SolarLayoutInner({ project }: { project: any }) {
   }, [roofPath, safetyBoundary, orientation, selectedPanel, isLoaded, manualRows, manualPanelsPerRow, manualRowSpacing, stats, setPanels, toast]);
   useEffect(() => {
     if (roofPath.length >= 3 && isLoaded) {
-      const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines);
+      const target = targetCapacityKW > 0 ? targetCapacityKW : undefined;
+      const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target);
       setPanels(result);
     }
-  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length]);
+  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW]);
 
   // Map click handler
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
@@ -418,6 +425,7 @@ function SolarLayoutInner({ project }: { project: any }) {
       safetySetback,
       obstacleCount: obstacles.length,
       windZone,
+      targetCapacityKW: targetCapacityKW > 0 ? targetCapacityKW : undefined,
     });
     toast({ title: "PDF Exported", description: "Solar plan PDF downloaded." });
   };
@@ -511,41 +519,73 @@ function SolarLayoutInner({ project }: { project: any }) {
         <RoofTypePanel />
       </div>
 
-      {/* Panel Settings */}
+      {/* Target Capacity & Panel Settings */}
       <Card className="p-3 mb-3">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex flex-col gap-1.5 min-w-[200px]">
-            <Label className="flex items-center gap-2 text-xs font-medium">
-              <Sun className="h-3.5 w-3.5" /> Panel Type
-            </Label>
-            <Select value={String(selectedPanelIdx)} onValueChange={(v) => setSelectedPanelIdx(Number(v))}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PANEL_OPTIONS.map((p, i) => (
-                  <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col gap-4">
+          {/* Target kW Input */}
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1.5 min-w-[200px]">
+              <Label className="flex items-center gap-2 text-xs font-semibold">
+                <Zap className="h-3.5 w-3.5 text-primary" /> Target Capacity (kW)
+              </Label>
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                placeholder="e.g. 25, 50, 100"
+                value={targetCapacityKW || ""}
+                onChange={(e) => setTargetCapacityKW(e.target.value ? Number(e.target.value) : 0)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            {targetCapacityKW > 0 && (
+              <div className="text-xs text-muted-foreground">
+                Required: <strong>{Math.ceil((targetCapacityKW * 1000) / selectedPanel.watt)}</strong> panels of {selectedPanel.watt}Wp
+              </div>
+            )}
+            {capacityExceedsRoof && (
+              <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Target capacity exceeds usable rooftop area.
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <Label className="flex items-center gap-2 text-xs font-medium">
-              <RotateCw className="h-3.5 w-3.5" /> Orientation
-            </Label>
-            <Select value={orientation} onValueChange={(v) => setOrientation(v as any)}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="landscape">Landscape</SelectItem>
-                <SelectItem value="portrait">Portrait</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-            <Label className="flex items-center gap-2 text-xs font-medium">
-              <Ruler className="h-3.5 w-3.5" /> Tilt: {tiltAngle}°
-            </Label>
-            <Slider value={[tiltAngle]} onValueChange={(v) => setTiltAngle(v[0])} min={0} max={45} step={1} />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>0° flat</span><span>15° optimal</span><span>45° steep</span>
+
+          {/* Panel Type, Orientation, Tilt */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-1.5 min-w-[200px]">
+              <Label className="flex items-center gap-2 text-xs font-medium">
+                <Sun className="h-3.5 w-3.5" /> Panel Type
+              </Label>
+              <Select value={String(selectedPanelIdx)} onValueChange={(v) => setSelectedPanelIdx(Number(v))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PANEL_OPTIONS.map((p, i) => (
+                    <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5 min-w-[140px]">
+              <Label className="flex items-center gap-2 text-xs font-medium">
+                <RotateCw className="h-3.5 w-3.5" /> Orientation
+              </Label>
+              <Select value={orientation} onValueChange={(v) => setOrientation(v as any)}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="landscape">Landscape</SelectItem>
+                  <SelectItem value="portrait">Portrait</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
+              <Label className="flex items-center gap-2 text-xs font-medium">
+                <Ruler className="h-3.5 w-3.5" /> Tilt: {tiltAngle}°
+              </Label>
+              <Slider value={[tiltAngle]} onValueChange={(v) => setTiltAngle(v[0])} min={0} max={45} step={1} />
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>0° flat</span><span>15° optimal</span><span>45° steep</span>
+              </div>
             </div>
           </div>
         </div>

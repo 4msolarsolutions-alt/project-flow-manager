@@ -370,7 +370,8 @@ export function autoFitPanelsOnMap(
   tiltAngle: number,
   obstacles: ObstacleItem[],
   walkways: WalkwayItem[],
-  pipelines: PipelineItem[]
+  pipelines: PipelineItem[],
+  targetKW?: number
 ): { north: number; south: number; east: number; west: number }[] {
   const usePath = safetyBoundary.length >= 3 ? safetyBoundary : roofPath;
   if (usePath.length < 3) return [];
@@ -381,28 +382,153 @@ export function autoFitPanelsOnMap(
   const ne = bounds.getNorthEast();
   const sw = bounds.getSouthWest();
   const centerLat = (ne.lat() + sw.lat()) / 2;
+  const centerLng = (ne.lng() + sw.lng()) / 2;
 
   const panelH = orient === "landscape" ? panel.width : panel.length;
   const panelW = orient === "landscape" ? panel.length : panel.width;
   const rowSpacing = calculateRowSpacing(panelH, tiltAngle);
+  const effectiveRowH = panelH + Math.max(rowSpacing, 0.3);
+  const effectiveColW = panelW + 0.1;
 
-  const panelLatSize = metersToLatDeg(panelH + Math.max(rowSpacing, 0.3));
-  const panelLngSize = metersToLngDeg(panelW + 0.1, centerLat);
+  const panelLatSize = metersToLatDeg(effectiveRowH);
+  const panelLngSize = metersToLngDeg(effectiveColW, centerLat);
+  const pureLatSize = metersToLatDeg(panelH);
+  const pureLngSize = metersToLngDeg(panelW, centerLat);
 
-  const panels: { north: number; south: number; east: number; west: number }[] = [];
+  // Required panels for target kW
+  const maxPanelsNeeded = targetKW && targetKW > 0
+    ? Math.ceil((targetKW * 1000) / panel.watt)
+    : Infinity;
+
   const poly = new google.maps.Polygon({ paths: usePath });
 
+  // Build obstacle exclusion zones (lat/lng rects with 0.5m buffer)
+  const obstacleZones = obstacles.map((obs) => {
+    const obsLat = centerLat + obs.position[2] / 111320;
+    const obsLng = centerLng + obs.position[0] / (111320 * Math.cos((centerLat * Math.PI) / 180));
+    const bufferM = 0.5;
+    const halfW = (obs.width / 2 + bufferM);
+    const halfL = (obs.length / 2 + bufferM);
+    return {
+      south: obsLat - metersToLatDeg(halfL),
+      north: obsLat + metersToLatDeg(halfL),
+      west: obsLng - metersToLngDeg(halfW, centerLat),
+      east: obsLng + metersToLngDeg(halfW, centerLat),
+    };
+  });
+
+  // Walkway exclusion zones
+  const walkwayZones = walkways.flatMap((w) => {
+    if (w.path.length < 2) return [];
+    const zones: { south: number; north: number; west: number; east: number }[] = [];
+    for (let i = 0; i < w.path.length - 1; i++) {
+      const p1 = w.path[i], p2 = w.path[i + 1];
+      const halfW = metersToLngDeg(w.width / 2, centerLat);
+      const halfH = metersToLatDeg(w.width / 2);
+      zones.push({
+        south: Math.min(p1.lat, p2.lat) - halfH,
+        north: Math.max(p1.lat, p2.lat) + halfH,
+        west: Math.min(p1.lng, p2.lng) - halfW,
+        east: Math.max(p1.lng, p2.lng) + halfW,
+      });
+    }
+    return zones;
+  });
+
+  // Pipeline exclusion zones (with clearance)
+  const pipelineZones = pipelines.flatMap((p) => {
+    if (p.path.length < 2) return [];
+    const zones: { south: number; north: number; west: number; east: number }[] = [];
+    const totalW = p.width + p.clearance * 2;
+    for (let i = 0; i < p.path.length - 1; i++) {
+      const p1 = p.path[i], p2 = p.path[i + 1];
+      const halfW = metersToLngDeg(totalW / 2, centerLat);
+      const halfH = metersToLatDeg(totalW / 2);
+      zones.push({
+        south: Math.min(p1.lat, p2.lat) - halfH,
+        north: Math.max(p1.lat, p2.lat) + halfH,
+        west: Math.min(p1.lng, p2.lng) - halfW,
+        east: Math.max(p1.lng, p2.lng) + halfW,
+      });
+    }
+    return zones;
+  });
+
+  const allExclusions = [...obstacleZones, ...walkwayZones, ...pipelineZones];
+
+  function isExcluded(lat: number, lng: number): boolean {
+    return allExclusions.some(z =>
+      lat >= z.south && lat <= z.north && lng >= z.west && lng <= z.east
+    );
+  }
+
+  // Phase 1: Scan entire grid to find all valid cells
+  const allCells: { row: number; col: number; lat: number; lng: number }[] = [];
+  let rowIdx = 0;
   for (let lat = sw.lat(); lat < ne.lat(); lat += panelLatSize) {
+    let colIdx = 0;
     for (let lng = sw.lng(); lng < ne.lng(); lng += panelLngSize) {
-      const center = new google.maps.LatLng(lat + panelLatSize / 2, lng + panelLngSize / 2);
-      if (google.maps.geometry?.poly?.containsLocation(center, poly)) {
-        panels.push({
-          north: lat + metersToLatDeg(panelH),
-          south: lat,
-          east: lng + metersToLngDeg(panelW, centerLat),
-          west: lng,
-        });
+      const cLat = lat + panelLatSize / 2;
+      const cLng = lng + panelLngSize / 2;
+      const center = new google.maps.LatLng(cLat, cLng);
+      if (google.maps.geometry?.poly?.containsLocation(center, poly) && !isExcluded(cLat, cLng)) {
+        allCells.push({ row: rowIdx, col: colIdx, lat, lng });
       }
+      colIdx++;
+    }
+    rowIdx++;
+  }
+
+  if (allCells.length === 0) return [];
+
+  // Phase 2: Group by row, sort rows, center each row
+  const rowMap = new Map<number, typeof allCells>();
+  allCells.forEach(c => {
+    if (!rowMap.has(c.row)) rowMap.set(c.row, []);
+    rowMap.get(c.row)!.push(c);
+  });
+
+  // Sort rows from south to north
+  const sortedRows = Array.from(rowMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([, cells]) => cells.sort((a, b) => a.col - b.col));
+
+  // Find the maximum panels per row for uniform block
+  const maxPerRow = Math.max(...sortedRows.map(r => r.length));
+
+  // Phase 3: Build centered, rectangular panel array
+  const panels: { north: number; south: number; east: number; west: number }[] = [];
+  let placed = 0;
+
+  // Determine how many rows we need for target
+  const rowsNeeded = targetKW && targetKW > 0
+    ? Math.ceil(maxPanelsNeeded / maxPerRow)
+    : sortedRows.length;
+
+  // Center rows vertically: skip excess rows from top/bottom
+  const rowStart = Math.max(0, Math.floor((sortedRows.length - rowsNeeded) / 2));
+  const rowEnd = Math.min(sortedRows.length, rowStart + rowsNeeded);
+
+  for (let ri = rowStart; ri < rowEnd && placed < maxPanelsNeeded; ri++) {
+    const row = sortedRows[ri];
+    if (row.length === 0) continue;
+
+    // Determine panels to place in this row (min of available, maxPerRow, remaining)
+    const panelsInRow = Math.min(row.length, maxPanelsNeeded - placed);
+
+    // Center horizontally: skip excess columns from left/right
+    const colStart = Math.floor((row.length - panelsInRow) / 2);
+    const colEnd = colStart + panelsInRow;
+
+    for (let ci = colStart; ci < colEnd && placed < maxPanelsNeeded; ci++) {
+      const cell = row[ci];
+      panels.push({
+        north: cell.lat + pureLatSize,
+        south: cell.lat,
+        east: cell.lng + pureLngSize,
+        west: cell.lng,
+      });
+      placed++;
     }
   }
 
