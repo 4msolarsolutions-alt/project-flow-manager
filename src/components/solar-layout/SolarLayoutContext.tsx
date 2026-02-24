@@ -11,6 +11,11 @@ import {
 export type DrawTool = "none" | "roof" | "obstacle" | "walkway" | "pipeline" | "safety_edge" | "drain";
 
 interface SolarLayoutState {
+  // Target capacity
+  targetCapacityKW: number;
+  setTargetCapacityKW: (v: number) => void;
+  capacityExceedsRoof: boolean;
+
   // Location
   latitude: number;
   longitude: number;
@@ -120,6 +125,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   const [longitude, setLongitude] = useState(initialLongitude);
   const [address, setAddress] = useState("");
   const [fireComplianceRequired, setFireComplianceRequired] = useState(false);
+  const [targetCapacityKW, setTargetCapacityKW] = useState(0);
 
   // Roof
   const [roofType, setRoofType] = useState<RoofType>("rcc");
@@ -230,7 +236,23 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
     setTiltAngle(optimalTilt(latitude));
   }, [latitude]);
 
+  // Check if target exceeds what roof can hold
+  const maxPossibleKW = useMemo(() => {
+    if (usableAreaM2 <= 0) return 0;
+    const panelH = orientation === "landscape" ? selectedPanel.width : selectedPanel.length;
+    const panelW = orientation === "landscape" ? selectedPanel.length : selectedPanel.width;
+    const rowSpacing = panelH * Math.tan((tiltAngle * Math.PI) / 180);
+    const effectiveRowH = panelH + Math.max(rowSpacing, 0.3);
+    const effectiveColW = panelW + 0.1;
+    const side = Math.sqrt(usableAreaM2);
+    const maxPanels = Math.floor(side / effectiveColW) * Math.floor(side / effectiveRowH);
+    return (maxPanels * selectedPanel.watt) / 1000;
+  }, [usableAreaM2, selectedPanel, orientation, tiltAngle]);
+
+  const capacityExceedsRoof = targetCapacityKW > 0 && targetCapacityKW > maxPossibleKW && maxPossibleKW > 0;
+
   const value: SolarLayoutState = {
+    targetCapacityKW, setTargetCapacityKW, capacityExceedsRoof,
     latitude, longitude, setLatitude, setLongitude, address, setAddress, windZone, fireComplianceRequired, setFireComplianceRequired,
     roofType, setRoofType, structureType, setStructureType, deadLoadLimit, setDeadLoadLimit,
     purlinSpacing, setPurlinSpacing, clampType, setClampType,

@@ -24,6 +24,7 @@ interface SolarPlanData {
   safetySetback: number;
   obstacleCount: number;
   windZone: string;
+  targetCapacityKW?: number;
 }
 
 const ROOF_LABELS: Record<RoofType, string> = {
@@ -59,7 +60,11 @@ export function exportSolarPlan(data: SolarPlanData) {
   let yPos = 55;
   const windWarning = getWindLoadWarning(data.panel.length, data.windZone);
 
-  const mainData = [
+  const mainData: string[][] = [];
+  if (data.targetCapacityKW && data.targetCapacityKW > 0) {
+    mainData.push(["Target Capacity", `${data.targetCapacityKW} kW`]);
+  }
+  mainData.push(
     ["Location", `${data.latitude.toFixed(4)}°N, ${data.longitude.toFixed(4)}°E`],
     ["Wind Zone", data.windZone],
     ["Roof Type", ROOF_LABELS[data.roofType]],
@@ -71,12 +76,13 @@ export function exportSolarPlan(data: SolarPlanData) {
     ["Module Efficiency", `${data.panel.efficiency}%`],
     ["Orientation", data.orientation.charAt(0).toUpperCase() + data.orientation.slice(1)],
     ["Tilt Angle", `${data.tiltAngle}°`],
+    ["Row Spacing", `${data.stats.rowSpacingM.toFixed(2)} m (shadow-safe)`],
     ["Total Panels", String(data.stats.totalPanels)],
     ["Total Capacity", `${data.stats.totalCapacityKW.toFixed(2)} kWp`],
     ["Roof Utilization", `${data.stats.roofUtilization.toFixed(1)}%`],
     ["Structural Load", `${data.stats.structuralLoadKgM2.toFixed(1)} kg/m²`],
     ["Inverter", data.stats.inverterSuggestion],
-  ];
+  );
 
   if (windWarning) {
     mainData.push(["⚠ Wind Warning", windWarning]);
