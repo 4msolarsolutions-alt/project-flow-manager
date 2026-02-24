@@ -562,21 +562,41 @@ function SolarLayoutInner({ project }: { project: any }) {
       {/* Target Capacity & Panel Settings */}
       <Card className="p-3 mb-3">
         <div className="flex flex-col gap-4">
-          {/* Target kW Input */}
+          {/* Target kW Input with OK button */}
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5 min-w-[200px]">
               <Label className="flex items-center gap-2 text-xs font-semibold">
                 <Zap className="h-3.5 w-3.5 text-primary" /> Target Capacity (kW)
               </Label>
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                placeholder="e.g. 25, 50, 100"
-                value={targetCapacityKW || ""}
-                onChange={(e) => setTargetCapacityKW(e.target.value ? Number(e.target.value) : 0)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  placeholder="e.g. 25, 50, 100"
+                  value={targetCapacityKW || ""}
+                  onChange={(e) => setTargetCapacityKW(e.target.value ? Number(e.target.value) : 0)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <Button
+                  size="sm"
+                  className="h-9 px-4"
+                  onClick={doAutoFill}
+                  disabled={roofPath.length < 3 || targetCapacityKW <= 0}
+                >
+                  OK
+                </Button>
+                {targetCapacityKW > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 px-2 text-xs text-muted-foreground"
+                    onClick={() => setTargetCapacityKW(0)}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
             {targetCapacityKW > 0 && (
               <div className="text-xs text-muted-foreground">
@@ -631,57 +651,59 @@ function SolarLayoutInner({ project }: { project: any }) {
         </div>
       </Card>
 
-      {/* Manual Row & Spacing Controls */}
-      <Card className="p-3 mb-3">
-        <div className="flex flex-col gap-2">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Manual Panel Layout</Label>
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex flex-col gap-1 min-w-[120px]">
-              <Label className="text-xs">Number of Rows</Label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                placeholder={String(stats.totalRows || "Auto")}
-                value={manualRows}
-                onChange={(e) => setManualRows(e.target.value ? Number(e.target.value) : "")}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
+      {/* Manual Row & Spacing Controls — hidden when target capacity is active */}
+      {targetCapacityKW <= 0 && (
+        <Card className="p-3 mb-3">
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Manual Panel Layout</Label>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex flex-col gap-1 min-w-[120px]">
+                <Label className="text-xs">Number of Rows</Label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  placeholder={String(stats.totalRows || "Auto")}
+                  value={manualRows}
+                  onChange={(e) => setManualRows(e.target.value ? Number(e.target.value) : "")}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="flex flex-col gap-1 min-w-[140px]">
+                <Label className="text-xs">Panels per Row</Label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  placeholder={String(stats.panelsPerRow || "Auto")}
+                  value={manualPanelsPerRow}
+                  onChange={(e) => setManualPanelsPerRow(e.target.value ? Number(e.target.value) : "")}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="flex flex-col gap-1 min-w-[150px]">
+                <Label className="text-xs">Row Spacing (meters)</Label>
+                <input
+                  type="number"
+                  min={0.1}
+                  max={5}
+                  step={0.1}
+                  placeholder={stats.rowSpacingM?.toFixed(1) || "Auto"}
+                  value={manualRowSpacing}
+                  onChange={(e) => setManualRowSpacing(e.target.value ? Number(e.target.value) : "")}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <Button size="sm" className="h-8" onClick={doManualFill} disabled={roofPath.length < 3}>
+                <Grid3X3 className="mr-1.5 h-3.5 w-3.5" /> Apply Layout
+              </Button>
             </div>
-            <div className="flex flex-col gap-1 min-w-[140px]">
-              <Label className="text-xs">Panels per Row</Label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                placeholder={String(stats.panelsPerRow || "Auto")}
-                value={manualPanelsPerRow}
-                onChange={(e) => setManualPanelsPerRow(e.target.value ? Number(e.target.value) : "")}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-            <div className="flex flex-col gap-1 min-w-[150px]">
-              <Label className="text-xs">Row Spacing (meters)</Label>
-              <input
-                type="number"
-                min={0.1}
-                max={5}
-                step={0.1}
-                placeholder={stats.rowSpacingM?.toFixed(1) || "Auto"}
-                value={manualRowSpacing}
-                onChange={(e) => setManualRowSpacing(e.target.value ? Number(e.target.value) : "")}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-            </div>
-            <Button size="sm" className="h-8" onClick={doManualFill} disabled={roofPath.length < 3}>
-              <Grid3X3 className="mr-1.5 h-3.5 w-3.5" /> Apply Layout
-            </Button>
+            <p className="text-[10px] text-muted-foreground">
+              Leave blank to auto-calculate. Current: {stats.totalRows} rows × {stats.panelsPerRow} panels/row, {stats.rowSpacingM.toFixed(2)}m spacing
+            </p>
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Leave blank to auto-calculate. Current: {stats.totalRows} rows × {stats.panelsPerRow} panels/row, {stats.rowSpacingM.toFixed(2)}m spacing
-          </p>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Walkway, Pipeline, Safety */}
       <WalkwayPipelinePanel />
