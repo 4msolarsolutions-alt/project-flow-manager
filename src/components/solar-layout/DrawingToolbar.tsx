@@ -80,7 +80,7 @@ export function DrawingToolbar({ onAutoFill, onClear, onFinishDraw }: DrawingToo
             variant="default"
             className="h-8 text-xs gap-1.5"
             onClick={onFinishDraw}
-            disabled={drawPoints.length < 3 && activeTool === "roof"}
+            disabled={drawPoints.length < (activeTool === "roof" || activeTool === "safety_edge" ? 3 : 2)}
           >
             <CheckCircle2 className="h-3.5 w-3.5" /> Finish ({drawPoints.length} pts)
           </Button>
