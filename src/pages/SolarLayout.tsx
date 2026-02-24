@@ -11,7 +11,7 @@ import { useProject, useProjects } from "@/hooks/useProjects";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker, Polyline } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker, Polyline, Autocomplete } from "@react-google-maps/api";
 import {
   Loader2, Save, Sun, Zap, ArrowLeft, RotateCw, Ruler,
   FileText, Map, Box, Download, MapPin,
@@ -34,7 +34,7 @@ import { exportSolarPlan } from "@/utils/solarPlanExport";
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
-const LIBRARIES: ("geometry")[] = ["geometry"];
+const LIBRARIES: ("geometry" | "places")[] = ["geometry", "places"];
 
 const mapContainerStyle = { width: "100%", height: "500px", borderRadius: "12px" };
 const defaultCenter = { lat: 13.0827, lng: 80.2707 };
@@ -161,6 +161,7 @@ function SolarLayoutInner({ project }: { project: any }) {
   const [saving, setSaving] = useState(false);
   const [generatingQuote, setGeneratingQuote] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
@@ -349,6 +350,13 @@ function SolarLayoutInner({ project }: { project: any }) {
     mapRef.current = map;
   }, []);
 
+  // Pan map when coordinates change
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat: latitude, lng: longitude });
+    }
+  }, [latitude, longitude]);
+
   useEffect(() => {
     if (mapRef.current && roofPath.length > 0) {
       const bounds = new google.maps.LatLngBounds();
@@ -356,6 +364,23 @@ function SolarLayoutInner({ project }: { project: any }) {
       mapRef.current.fitBounds(bounds);
     }
   }, [roofPath]);
+
+  const onAutocompletePlaced = useCallback(() => {
+    const ac = autocompleteRef.current;
+    if (!ac) return;
+    const place = ac.getPlace();
+    if (place?.geometry?.location) {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      setLatitude(lat);
+      setLongitude(lng);
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat, lng });
+        mapRef.current.setZoom(20);
+      }
+      toast({ title: "Location Set", description: place.formatted_address || `${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+    }
+  }, [setLatitude, setLongitude, toast]);
 
   // Walkway polygons for display
   const perimeterWalkwayPath = hasPerimeterWalkway && roofPath.length >= 3
@@ -465,6 +490,23 @@ function SolarLayoutInner({ project }: { project: any }) {
           {/* Drawing Toolbar */}
           <DrawingToolbar onAutoFill={doAutoFill} onClear={handleClear} onFinishDraw={finishDrawing} />
 
+          {/* Location Search */}
+          {isLoaded && (
+            <div className="flex gap-2 items-center">
+              <Autocomplete
+                onLoad={(ac) => { autocompleteRef.current = ac; }}
+                onPlaceChanged={onAutocompletePlaced}
+                options={{ types: ["geocode", "establishment"] }}
+              >
+                <input
+                  type="text"
+                  placeholder="Search location, address, or place..."
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </Autocomplete>
+            </div>
+          )}
+
           {/* Drawing instructions */}
           {activeTool !== "none" && (
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-700 dark:text-amber-300">
@@ -481,7 +523,7 @@ function SolarLayoutInner({ project }: { project: any }) {
             ) : (
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
-                center={roofPath.length > 0 ? roofPath[0] : defaultCenter}
+                center={{ lat: latitude, lng: longitude }}
                 zoom={20}
                 mapTypeId="satellite"
                 onLoad={onMapLoad}
@@ -490,6 +532,11 @@ function SolarLayoutInner({ project }: { project: any }) {
                   draggableCursor: activeTool !== "none" ? "crosshair" : undefined,
                 }}
               >
+                {/* Current location marker */}
+                {roofPath.length === 0 && activeTool === "none" && (
+                  <Marker position={{ lat: latitude, lng: longitude }} />
+                )}
+
                 {/* Drawing points preview */}
                 {drawPoints.map((pt, i) => (
                   <Marker key={`draw-${i}`} position={pt} icon={{
