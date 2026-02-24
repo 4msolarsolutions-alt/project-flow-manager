@@ -325,7 +325,7 @@ export default function SolarDesign3D({
           <Canvas
             shadows={showShadows}
             camera={{ position: [sceneRadius * 0.8, sceneRadius * 0.6, sceneRadius * 0.8], fov: 50 }}
-            gl={{ antialias: true, toneMapping: 3 }}
+            gl={{ antialias: true, toneMapping: 3, preserveDrawingBuffer: true }}
           >
             <color attach="background" args={["#87CEEB"]} />
             <ambientLight intensity={0.4} />
