@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useSolarLayout } from "./SolarLayoutContext";
 
 export function LocationPanel() {
-  const { latitude, longitude, setLatitude, setLongitude, windZone, fireComplianceRequired, setFireComplianceRequired, tiltAngle } = useSolarLayout();
+  const { latitude, longitude, setLatitude, setLongitude, address, windZone, fireComplianceRequired, setFireComplianceRequired, tiltAngle } = useSolarLayout();
   const [pasteValue, setPasteValue] = useState("");
 
   const parseAndSetCoords = (value: string) => {
@@ -62,6 +62,11 @@ export function LocationPanel() {
       <h3 className="text-sm font-semibold flex items-center gap-2">
         <MapPin className="h-4 w-4 text-primary" /> Location & Coordinates
       </h3>
+      {address && (
+        <p className="text-xs text-muted-foreground truncate" title={address}>
+          📍 {address}
+        </p>
+      )}
 
       {/* Paste-friendly input */}
       <div className="flex gap-2 items-end">
