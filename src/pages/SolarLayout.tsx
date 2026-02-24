@@ -62,11 +62,44 @@ export default function SolarLayout() {
   const projectIdParam = searchParams.get("project");
   const leadIdParam = searchParams.get("lead");
   const { projects } = useProjects();
-
+  const { leads } = useLeads();
   const resolvedProjectId = projectIdParam || (leadIdParam && projects?.find(p => p.lead_id === leadIdParam)?.id) || undefined;
   const { data: project, isLoading: projectLoading } = useProject(resolvedProjectId);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [autoCreating, setAutoCreating] = useState(false);
+
+  // Auto-create project for a lead if none exists
+  useEffect(() => {
+    if (!resolvedProjectId && leadIdParam && projects && !autoCreating) {
+      const existingProject = projects.find(p => p.lead_id === leadIdParam);
+      if (!existingProject) {
+        const lead = leads?.find((l: any) => l.id === leadIdParam);
+        if (lead) {
+          setAutoCreating(true);
+          supabase
+            .from("projects")
+            .insert({
+              lead_id: leadIdParam,
+              project_name: `${lead.customer_name} - ${(lead.project_type || 'epc').toUpperCase()}`,
+              project_type: lead.project_type || 'epc',
+              status: 'planning',
+            })
+            .select()
+            .single()
+            .then(({ data, error }) => {
+              setAutoCreating(false);
+              if (error) {
+                toast({ title: "Error creating project", description: error.message, variant: "destructive" });
+              } else if (data) {
+                queryClient.invalidateQueries({ queryKey: ["projects"] });
+                toast({ title: "Project Created", description: "A project was auto-created for this lead." });
+              }
+            });
+        }
+      }
+    }
+  }, [resolvedProjectId, leadIdParam, projects, leads, autoCreating, queryClient, toast]);
 
   const [roofPath, setRoofPath] = useState<google.maps.LatLngLiteral[]>([]);
   const [panels, setPanels] = useState<{ north: number; south: number; east: number; west: number }[]>([]);
@@ -288,11 +321,12 @@ export default function SolarLayout() {
     }
   }, [roofPath]);
 
-  if (projectLoading) {
+  if (projectLoading || autoCreating) {
     return (
       <AppLayout title="Solar Layout">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          {autoCreating && <p className="ml-3 text-muted-foreground">Creating project...</p>}
         </div>
       </AppLayout>
     );
