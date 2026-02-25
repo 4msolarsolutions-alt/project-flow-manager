@@ -47,6 +47,10 @@ interface SolarLayoutState {
   setOrientation: (v: PanelOrientation) => void;
   tiltAngle: number;
   setTiltAngle: (v: number) => void;
+  panelGap: number;
+  setPanelGap: (v: number) => void;
+  rowGap: number;
+  setRowGap: (v: number) => void;
 
   // Roof polygon
   roofPath: google.maps.LatLngLiteral[];
@@ -138,6 +142,8 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   const [selectedPanelIdx, setSelectedPanelIdx] = useState(0);
   const [orientation, setOrientation] = useState<PanelOrientation>("landscape");
   const [tiltAngle, setTiltAngle] = useState(15);
+  const [panelGap, setPanelGap] = useState(0.025); // 25mm default
+  const [rowGap, setRowGap] = useState(0.3); // 300mm default
 
   // Roof polygon
   const [roofPath, setRoofPath] = useState<google.maps.LatLngLiteral[]>([]);
@@ -258,6 +264,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
     roofType, setRoofType, structureType, setStructureType, deadLoadLimit, setDeadLoadLimit,
     purlinSpacing, setPurlinSpacing, clampType, setClampType,
     selectedPanelIdx, setSelectedPanelIdx, selectedPanel, orientation, setOrientation, tiltAngle, setTiltAngle,
+    panelGap, setPanelGap, rowGap, setRowGap,
     roofPath, setRoofPath, safetyBoundary, safetySetback, setSafetySetback,
     panels, setPanels,
     obstacles, setObstacles, addObstacle, removeObstacle,
