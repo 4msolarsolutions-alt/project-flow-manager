@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import {
-  PANEL_OPTIONS, type PanelOption, type PanelOrientation, type RoofType,
+  PANEL_OPTIONS, type PanelOption, type PanelOptionData, type PanelOrientation, type RoofType,
   type StructureType, type ClampType, type ObstacleItem, type WalkwayItem,
   type PipelineItem, type DesignStats, type RCCDetails, type MetalRoofDetails,
   type ComplianceStatus,
@@ -169,7 +169,8 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   // Project
   const [projectCategory, setProjectCategory] = useState<string | null>(initCategory);
 
-  const selectedPanel = PANEL_OPTIONS[selectedPanelIdx];
+  // Read from mutable PANEL_OPTIONS (re-read on idx change)
+  const selectedPanel: PanelOptionData = PANEL_OPTIONS[selectedPanelIdx] || PANEL_OPTIONS[0];
   const windZone = useMemo(() => getWindZone(latitude, longitude), [latitude, longitude]);
 
   // Safety boundary
