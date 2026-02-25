@@ -324,6 +324,17 @@ function SolarLayoutInner({ project }: { project: any }) {
     setActiveTool("none");
   };
 
+  const handleClearPanelsOnly = () => {
+    setPanels([]);
+    toast({ title: "Panels Cleared", description: "Roof polygon kept. Panels removed." });
+  };
+
+  const handleDeletePanel = (index: number) => {
+    const newPanels = panels.filter((_, i) => i !== index);
+    setPanels(newPanels);
+    toast({ title: "Panel Removed", description: `Panel #${index + 1} deleted. ${newPanels.length} remaining.` });
+  };
+
   const handleSave = async () => {
     if (!project?.id) return;
     setSaving(true);
@@ -819,7 +830,14 @@ function SolarLayoutInner({ project }: { project: any }) {
 
         <TabsContent value="2d" className="mt-3 space-y-3">
           {/* Drawing Toolbar */}
-          <DrawingToolbar onAutoFill={doAutoFill} onClear={handleClear} onFinishDraw={finishDrawing} />
+          <div className="flex flex-wrap items-center gap-2">
+            <DrawingToolbar onAutoFill={doAutoFill} onClear={handleClear} onFinishDraw={finishDrawing} />
+            {panels.length > 0 && (
+              <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleClearPanelsOnly}>
+                Clear Panels ({panels.length})
+              </Button>
+            )}
+          </div>
 
           {/* Location Search */}
           {isLoaded && (
@@ -922,12 +940,13 @@ function SolarLayoutInner({ project }: { project: any }) {
                   />
                 )}
 
-                {/* Panels */}
+                {/* Panels — click to delete */}
                 {panels.map((panel, i) => (
                   <Rectangle
                     key={i}
                     bounds={panel}
-                    options={{ fillColor: "#1e90ff", fillOpacity: 0.6, strokeColor: "#0d47a1", strokeWeight: 1, clickable: false }}
+                    options={{ fillColor: "#1e90ff", fillOpacity: 0.6, strokeColor: "#0d47a1", strokeWeight: 1, clickable: true }}
+                    onClick={() => handleDeletePanel(i)}
                   />
                 ))}
 
