@@ -28,7 +28,7 @@ import { StatsPanel } from "@/components/solar-layout/StatsPanel";
 import { CompliancePanel } from "@/components/solar-layout/CompliancePanel";
 import { WalkwayPipelinePanel } from "@/components/solar-layout/WalkwayPipelinePanel";
 import { ObstaclesList } from "@/components/solar-layout/ObstaclesList";
-import { PANEL_OPTIONS, autoFitPanelsOnMap, metersToLatDeg, metersToLngDeg, shrinkPolygon } from "@/utils/solarCalculations";
+import { PANEL_OPTIONS, autoFitPanelsOnMap, metersToLatDeg, metersToLngDeg, shrinkPolygon, updatePanelDimensions, addCustomPanel, type PanelOptionData } from "@/utils/solarCalculations";
 import { exportSolarPlan, capture2DLayout, capture3DLayout } from "@/utils/solarPlanExport";
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
@@ -160,6 +160,7 @@ function SolarLayoutInner({ project }: { project: any }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [, forceUpdate] = useState(0);
   const [manualRows, setManualRows] = useState<number | "">("");
   const [manualRowSpacing, setManualRowSpacing] = useState<number | "">("");
   const [manualPanelsPerRow, setManualPanelsPerRow] = useState<number | "">("");
@@ -618,7 +619,7 @@ function SolarLayoutInner({ project }: { project: any }) {
           </div>
 
           {/* Panel Type, Orientation, Tilt */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
             <div className="flex flex-col gap-1.5 min-w-[200px]">
               <Label className="flex items-center gap-2 text-xs font-medium">
                 <Sun className="h-3.5 w-3.5" /> Panel Type
@@ -627,11 +628,52 @@ function SolarLayoutInner({ project }: { project: any }) {
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PANEL_OPTIONS.map((p, i) => (
-                    <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>
+                    <SelectItem key={i} value={String(i)}>
+                      {p.label} ({p.length}m × {p.width}m)
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Panel Dimensions (editable) */}
+            <div className="flex flex-col gap-1.5 min-w-[100px]">
+              <Label className="text-xs font-medium">Length (m)</Label>
+              <input
+                type="number"
+                min={0.5}
+                max={5}
+                step={0.001}
+                value={selectedPanel.length}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val > 0) {
+                    updatePanelDimensions(selectedPanelIdx, val, selectedPanel.width);
+                    forceUpdate(n => n + 1);
+                  }
+                }}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 min-w-[100px]">
+              <Label className="text-xs font-medium">Width (m)</Label>
+              <input
+                type="number"
+                min={0.3}
+                max={3}
+                step={0.001}
+                value={selectedPanel.width}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val > 0) {
+                    updatePanelDimensions(selectedPanelIdx, selectedPanel.length, val);
+                    forceUpdate(n => n + 1);
+                  }
+                }}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
             <div className="flex flex-col gap-1.5 min-w-[140px]">
               <Label className="flex items-center gap-2 text-xs font-medium">
                 <RotateCw className="h-3.5 w-3.5" /> Orientation
@@ -653,6 +695,11 @@ function SolarLayoutInner({ project }: { project: any }) {
                 <span>0° flat</span><span>15° optimal</span><span>45° steep</span>
               </div>
             </div>
+          </div>
+
+          {/* Panel dimensions info */}
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-muted/50 rounded px-3 py-1.5">
+            <span>📐 <strong>{selectedPanel.watt}Wp</strong> — {selectedPanel.length}m × {selectedPanel.width}m — {selectedPanel.weight}kg — {selectedPanel.cellType} — η {selectedPanel.efficiency}%</span>
           </div>
         </div>
       </Card>
@@ -800,7 +847,7 @@ function SolarLayoutInner({ project }: { project: any }) {
                 {drawPoints.length >= 2 && (
                   <Polygon
                     paths={drawPoints}
-                    options={{ fillColor: "#ffeb3b", fillOpacity: 0.2, strokeColor: "#f44336", strokeWeight: 2, strokeOpacity: 0.8 }}
+                    options={{ fillColor: "#ffeb3b", fillOpacity: 0.2, strokeColor: "#f44336", strokeWeight: 2, strokeOpacity: 0.8, clickable: false }}
                   />
                 )}
 
@@ -808,7 +855,7 @@ function SolarLayoutInner({ project }: { project: any }) {
                 {roofPath.length > 0 && activeTool !== "roof" && (
                   <Polygon
                     paths={roofPath}
-                    options={{ fillColor: "#ffeb3b", fillOpacity: 0.15, strokeColor: "#f44336", strokeWeight: 2 }}
+                    options={{ fillColor: "#ffeb3b", fillOpacity: 0.15, strokeColor: "#f44336", strokeWeight: 2, clickable: false }}
                   />
                 )}
 
@@ -816,7 +863,7 @@ function SolarLayoutInner({ project }: { project: any }) {
                 {safetyBoundary.length > 0 && activeTool !== "roof" && (
                   <Polygon
                     paths={safetyBoundary}
-                    options={{ fillColor: "transparent", fillOpacity: 0, strokeColor: "#4ade80", strokeWeight: 2, strokeOpacity: 0.8 }}
+                    options={{ fillColor: "transparent", fillOpacity: 0, strokeColor: "#4ade80", strokeWeight: 2, strokeOpacity: 0.8, clickable: false }}
                   />
                 )}
 
@@ -824,7 +871,7 @@ function SolarLayoutInner({ project }: { project: any }) {
                 {perimeterWalkwayPath.length > 0 && (
                   <Polygon
                     paths={[roofPath, perimeterWalkwayPath]}
-                    options={{ fillColor: "#fbbf24", fillOpacity: 0.3, strokeColor: "#f59e0b", strokeWeight: 1 }}
+                    options={{ fillColor: "#fbbf24", fillOpacity: 0.3, strokeColor: "#f59e0b", strokeWeight: 1, clickable: false }}
                   />
                 )}
 
@@ -833,7 +880,7 @@ function SolarLayoutInner({ project }: { project: any }) {
                   <Rectangle
                     key={i}
                     bounds={panel}
-                    options={{ fillColor: "#1e90ff", fillOpacity: 0.6, strokeColor: "#0d47a1", strokeWeight: 1 }}
+                    options={{ fillColor: "#1e90ff", fillOpacity: 0.6, strokeColor: "#0d47a1", strokeWeight: 1, clickable: false }}
                   />
                 ))}
 

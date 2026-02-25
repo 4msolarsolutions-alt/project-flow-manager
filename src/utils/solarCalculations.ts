@@ -1,18 +1,43 @@
 // ========== EPC-Grade Solar Design Calculations ==========
 
-export const PANEL_OPTIONS = [
+export const DEFAULT_PANEL_OPTIONS: PanelOptionData[] = [
   { label: "630Wp Bifacial G12", watt: 630, length: 2.465, width: 1.303, weight: 35, cellType: "G12 210mm", efficiency: 23.3 },
   { label: "620Wp Bifacial", watt: 620, length: 2.384, width: 1.303, weight: 34, cellType: "N-Type Bifacial", efficiency: 23.0 },
   { label: "615Wp TOPCon", watt: 615, length: 2.278, width: 1.134, weight: 31, cellType: "N-Type TOPCon", efficiency: 22.8 },
+  { label: "600Wp N-Type", watt: 600, length: 2.278, width: 1.134, weight: 30.5, cellType: "N-Type TOPCon", efficiency: 22.5 },
   { label: "550W Panel", watt: 550, length: 2.278, width: 1.134, weight: 28.6, cellType: "Mono PERC", efficiency: 21.3 },
   { label: "540W Panel", watt: 540, length: 2.278, width: 1.134, weight: 28.2, cellType: "Mono PERC", efficiency: 21.0 },
   { label: "500W Panel", watt: 500, length: 2.187, width: 1.102, weight: 26.5, cellType: "Mono PERC", efficiency: 20.5 },
   { label: "450W Panel", watt: 450, length: 2.094, width: 1.038, weight: 24.0, cellType: "Mono PERC", efficiency: 19.8 },
   { label: "400W Panel", watt: 400, length: 1.956, width: 1.002, weight: 22.0, cellType: "Mono PERC", efficiency: 19.2 },
   { label: "335W Panel", watt: 335, length: 1.690, width: 0.996, weight: 18.5, cellType: "Poly", efficiency: 17.1 },
-] as const;
+];
 
-export type PanelOption = typeof PANEL_OPTIONS[number];
+export interface PanelOptionData {
+  label: string;
+  watt: number;
+  length: number;
+  width: number;
+  weight: number;
+  cellType: string;
+  efficiency: number;
+}
+
+// Mutable panel options list that can be extended with custom panels
+export let PANEL_OPTIONS: PanelOptionData[] = [...DEFAULT_PANEL_OPTIONS];
+
+export function addCustomPanel(panel: PanelOptionData): number {
+  PANEL_OPTIONS = [...PANEL_OPTIONS, panel];
+  return PANEL_OPTIONS.length - 1;
+}
+
+export function updatePanelDimensions(idx: number, length: number, width: number): void {
+  if (idx >= 0 && idx < PANEL_OPTIONS.length) {
+    PANEL_OPTIONS = PANEL_OPTIONS.map((p, i) => i === idx ? { ...p, length, width } : p);
+  }
+}
+
+export type PanelOption = PanelOptionData;
 export type PanelOrientation = "landscape" | "portrait";
 export type RoofType = "rcc" | "metal_sheet" | "tile" | "ground_mount";
 export type StructureType = "ballast" | "anchor";
