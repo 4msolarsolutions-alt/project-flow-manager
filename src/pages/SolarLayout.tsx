@@ -885,13 +885,13 @@ function SolarLayoutInner({ project }: { project: any }) {
                 options={{
                   draggableCursor: activeTool !== "none" ? "crosshair" : undefined,
                   maxZoom: 22,
-                  minZoom: 15,
+                  minZoom: 10,
                   scrollwheel: true,
                   disableDoubleClickZoom: false,
                   gestureHandling: "greedy",
                   zoomControl: true,
                   zoomControlOptions: {
-                    position: google.maps.ControlPosition.RIGHT_TOP,
+                    position: google.maps.ControlPosition.RIGHT_BOTTOM,
                   },
                   mapTypeControl: true,
                   mapTypeControlOptions: {
@@ -900,7 +900,10 @@ function SolarLayoutInner({ project }: { project: any }) {
                     mapTypeIds: ["roadmap", "satellite", "hybrid"],
                   },
                   streetViewControl: false,
-                  fullscreenControl: false,
+                  fullscreenControl: true,
+                  fullscreenControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_TOP,
+                  },
                 }}
               >
                 {/* Current location marker */}
