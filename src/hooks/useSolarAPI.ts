@@ -114,8 +114,15 @@ export function useSolarAPI() {
       return result as BuildingInsights;
     } catch (err: any) {
       const msg = err.message || "Failed to fetch solar data";
+      const isNotFound = msg.includes("not found") || msg.includes("No solar data");
       setError(msg);
-      toast({ title: "Solar API Error", description: msg, variant: "destructive" });
+      toast({ 
+        title: isNotFound ? "No Solar Data Found" : "Solar API Error", 
+        description: isNotFound 
+          ? "Google doesn't have solar data for this location. Try moving the pin to a nearby rooftop." 
+          : msg, 
+        variant: "destructive" 
+      });
       return null;
     } finally {
       setLoading(false);

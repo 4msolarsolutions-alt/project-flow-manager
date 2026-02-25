@@ -23,19 +23,31 @@ serve(async (req) => {
       );
     }
 
-    const quality = requiredQuality || "HIGH";
+    // Try quality levels in order: HIGH -> MEDIUM -> LOW
+    const qualities = requiredQuality ? [requiredQuality] : ["HIGH", "MEDIUM", "LOW"];
+    let data: any = null;
+    let lastError: any = null;
 
-    // Building Insights endpoint
-    const buildingUrl = `https://solar.googleapis.com/v1/buildingInsights:findClosest?location.latitude=${latitude}&location.longitude=${longitude}&requiredQuality=${quality}&key=${GOOGLE_MAPS_API_KEY}`;
+    for (const quality of qualities) {
+      const buildingUrl = `https://solar.googleapis.com/v1/buildingInsights:findClosest?location.latitude=${latitude}&location.longitude=${longitude}&requiredQuality=${quality}&key=${GOOGLE_MAPS_API_KEY}`;
+      const response = await fetch(buildingUrl);
+      data = await response.json();
 
-    const response = await fetch(buildingUrl);
-    const data = await response.json();
+      if (response.ok) {
+        break;
+      }
 
-    if (!response.ok) {
-      console.error("Solar API error:", JSON.stringify(data));
+      console.log(`Solar API ${quality} quality failed:`, data.error?.message);
+      lastError = data;
+      data = null;
+    }
+
+    if (!data) {
+      const msg = lastError?.error?.message || "No solar data available for this location. Try a different address with visible rooftops.";
+      console.error("Solar API error: all quality levels failed");
       return new Response(
-        JSON.stringify({ error: data.error?.message || "Solar API request failed", status: response.status }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: msg, status: 404 }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
