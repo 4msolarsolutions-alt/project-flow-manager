@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker, Polyline, Autocomplete } from "@react-google-maps/api";
 import {
   Loader2, Save, Sun, Zap, ArrowLeft, RotateCw, Ruler,
-  FileText, Map, Box, Download, MapPin, Grid3X3, AlertTriangle,
+  FileText, Map, Box, Download, MapPin, Grid3X3, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
@@ -30,6 +30,8 @@ import { WalkwayPipelinePanel } from "@/components/solar-layout/WalkwayPipelineP
 import { ObstaclesList } from "@/components/solar-layout/ObstaclesList";
 import { PANEL_OPTIONS, autoFitPanelsOnMap, metersToLatDeg, metersToLngDeg, shrinkPolygon, updatePanelDimensions, addCustomPanel, type PanelOptionData } from "@/utils/solarCalculations";
 import { exportSolarPlan, capture2DLayout, capture3DLayout } from "@/utils/solarPlanExport";
+import { useSolarAPI } from "@/hooks/useSolarAPI";
+import { SolarInsightsPanel } from "@/components/solar-layout/SolarInsightsPanel";
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
@@ -168,11 +170,19 @@ function SolarLayoutInner({ project }: { project: any }) {
   const [generatingQuote, setGeneratingQuote] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const solarAPI = useSolarAPI();
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: LIBRARIES,
   });
+
+  // Auto-fetch solar data when location changes significantly
+  const lastFetchedRef = useRef<string>("");
+  const handleFetchSolarData = useCallback(() => {
+    solarAPI.fetchBuildingInsights(latitude, longitude);
+    lastFetchedRef.current = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  }, [latitude, longitude, solarAPI]);
 
   // Load saved layout
   useEffect(() => {
@@ -820,6 +830,16 @@ function SolarLayoutInner({ project }: { project: any }) {
       {/* Compliance */}
       <div className="mt-3">
         <CompliancePanel />
+      </div>
+
+      {/* Google Solar Insights */}
+      <div className="mt-3">
+        <SolarInsightsPanel
+          data={solarAPI.data}
+          loading={solarAPI.loading}
+          error={solarAPI.error}
+          onFetch={handleFetchSolarData}
+        />
       </div>
 
       {/* Tabs: 2D / 3D */}
