@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   MousePointer, Pentagon, Box, Footprints, Droplets, ShieldCheck,
-  GripVertical, Grid3X3, Trash2, CheckCircle2, X, Eye,
+  GripVertical, Grid3X3, Trash2, CheckCircle2, X, Eye, MapPin,
 } from "lucide-react";
 import { useSolarLayout, type DrawTool } from "./SolarLayoutContext";
 
@@ -14,6 +14,7 @@ interface DrawingToolbarProps {
 
 const tools: { tool: DrawTool; label: string; icon: typeof MousePointer; description: string }[] = [
   { tool: "roof", label: "Draw Roof", icon: Pentagon, description: "Click to place roof corners" },
+  { tool: "start_point", label: "Start Point", icon: MapPin, description: "Click to set panel fill origin" },
   { tool: "obstacle", label: "Obstacle", icon: Box, description: "Add obstacle on map" },
   { tool: "walkway", label: "Walkway", icon: Footprints, description: "Draw walkway path" },
   { tool: "pipeline", label: "Pipeline", icon: Droplets, description: "Draw water pipeline" },
