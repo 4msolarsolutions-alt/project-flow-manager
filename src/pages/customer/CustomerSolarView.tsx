@@ -5,7 +5,7 @@ import { useCustomerProjects } from "@/hooks/useCustomerProjects";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle } from "@react-google-maps/api";
 import { Loader2, Sun, Zap, Battery, BarChart3 } from "lucide-react";
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
+const GOOGLE_MAPS_API_KEY = "AIzaSyBdAjpPwn-S1QzJ1nQGsiCSbNXelewGPRE";
 const LIBRARIES: ("geometry" | "places")[] = ["geometry", "places"];
 const PANEL_WATT = 550;
 

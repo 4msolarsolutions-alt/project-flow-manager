@@ -33,7 +33,7 @@ import { exportSolarPlan, capture2DLayout, capture3DLayout } from "@/utils/solar
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyCo4qVbO5BnurRIkcQ-MWb-CAaTpwX0r_A";
+const GOOGLE_MAPS_API_KEY = "AIzaSyBdAjpPwn-S1QzJ1nQGsiCSbNXelewGPRE";
 const LIBRARIES: ("geometry" | "places")[] = ["geometry", "places"];
 
 const mapContainerStyle = { width: "100%", height: "500px", borderRadius: "12px" };
