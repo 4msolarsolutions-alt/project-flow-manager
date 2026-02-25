@@ -86,7 +86,16 @@ export default function CustomerSolarView() {
             zoom={20}
             mapTypeId="satellite"
             onLoad={(map) => { mapRef.current = map; }}
-            options={{ disableDefaultUI: true, zoomControl: true }}
+            options={{
+              disableDefaultUI: true,
+              zoomControl: true,
+              mapTypeControl: true,
+              mapTypeControlOptions: {
+                style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                position: google.maps.ControlPosition.TOP_LEFT,
+                mapTypeIds: ["roadmap", "satellite", "hybrid"],
+              },
+            }}
           >
             {layout.roofPolygon.length > 0 && (
               <Polygon

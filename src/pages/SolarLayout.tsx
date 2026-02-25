@@ -893,7 +893,12 @@ function SolarLayoutInner({ project }: { project: any }) {
                   zoomControlOptions: {
                     position: google.maps.ControlPosition.RIGHT_TOP,
                   },
-                  mapTypeControl: false,
+                  mapTypeControl: true,
+                  mapTypeControlOptions: {
+                    style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                    position: google.maps.ControlPosition.TOP_LEFT,
+                    mapTypeIds: ["roadmap", "satellite", "hybrid"],
+                  },
                   streetViewControl: false,
                   fullscreenControl: false,
                 }}
