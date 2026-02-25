@@ -398,7 +398,8 @@ export function autoFitPanelsOnMap(
   pipelines: PipelineItem[],
   targetKW?: number,
   panelGap: number = 0.025,
-  rowGap?: number
+  rowGap?: number,
+  startPoint?: google.maps.LatLngLiteral | null
 ): { north: number; south: number; east: number; west: number }[] {
   const usePath = safetyBoundary.length >= 3 ? safetyBoundary : roofPath;
   if (usePath.length < 3) return [];
@@ -490,11 +491,17 @@ export function autoFitPanelsOnMap(
   }
 
   // Phase 1: Scan entire grid to find all valid cells
+  // If startPoint is set, use it as origin; otherwise use SW corner
+  const originLat = startPoint ? startPoint.lat : sw.lat();
+  const originLng = startPoint ? startPoint.lng : sw.lng();
+
   const allCells: { row: number; col: number; lat: number; lng: number }[] = [];
   let rowIdx = 0;
-  for (let lat = sw.lat(); lat < ne.lat(); lat += panelLatSize) {
+  for (let lat = originLat; lat < ne.lat(); lat += panelLatSize) {
+    if (lat + pureLatSize > ne.lat()) break;
     let colIdx = 0;
-    for (let lng = sw.lng(); lng < ne.lng(); lng += panelLngSize) {
+    for (let lng = originLng; lng < ne.lng(); lng += panelLngSize) {
+      if (lng + pureLngSize > ne.lng()) break;
       const cLat = lat + panelLatSize / 2;
       const cLng = lng + panelLngSize / 2;
       const center = new google.maps.LatLng(cLat, cLng);
@@ -503,7 +510,39 @@ export function autoFitPanelsOnMap(
       }
       colIdx++;
     }
+    // Also scan leftward from origin if start point is not at SW
+    if (startPoint) {
+      let colLeft = -1;
+      for (let lng = originLng - panelLngSize; lng >= sw.lng(); lng -= panelLngSize) {
+        const cLat = lat + panelLatSize / 2;
+        const cLng = lng + panelLngSize / 2;
+        const center = new google.maps.LatLng(cLat, cLng);
+        if (google.maps.geometry?.poly?.containsLocation(center, poly) && !isExcluded(cLat, cLng)) {
+          allCells.push({ row: rowIdx, col: colLeft, lat, lng });
+        }
+        colLeft--;
+      }
+    }
     rowIdx++;
+  }
+  // Also scan downward from origin if start point is not at SW
+  if (startPoint) {
+    let rowDown = -1;
+    for (let lat = originLat - panelLatSize; lat >= sw.lat(); lat -= panelLatSize) {
+      if (lat < sw.lat()) break;
+      let colIdx = 0;
+      for (let lng = sw.lng(); lng < ne.lng(); lng += panelLngSize) {
+        if (lng + pureLngSize > ne.lng()) break;
+        const cLat = lat + panelLatSize / 2;
+        const cLng = lng + panelLngSize / 2;
+        const center = new google.maps.LatLng(cLat, cLng);
+        if (google.maps.geometry?.poly?.containsLocation(center, poly) && !isExcluded(cLat, cLng)) {
+          allCells.push({ row: rowDown, col: colIdx, lat, lng });
+        }
+        colIdx++;
+      }
+      rowDown--;
+    }
   }
 
   if (allCells.length === 0) return [];

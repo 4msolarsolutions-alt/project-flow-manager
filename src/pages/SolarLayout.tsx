@@ -147,7 +147,7 @@ function SolarLayoutInner({ project }: { project: any }) {
     roofPath, setRoofPath, safetyBoundary, safetySetback,
     panels, setPanels,
     obstacles, walkways, pipelines,
-    activeTool, setActiveTool, drawPoints, setDrawPoints,
+    activeTool, setActiveTool, drawPoints, setDrawPoints, startPoint, setStartPoint,
     activeTab, setActiveTab,
     stats, rccDetails, metalRoofDetails, compliance, roofAreaM2, usableAreaM2,
     hasPerimeterWalkway, perimeterWalkwayWidth, hasCentralWalkway, centralWalkwayWidth,
@@ -195,14 +195,14 @@ function SolarLayoutInner({ project }: { project: any }) {
   const doAutoFill = useCallback(() => {
     if (roofPath.length < 3 || !isLoaded) return;
     const target = targetCapacityKW > 0 ? targetCapacityKW : undefined;
-    const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap);
+    const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap, startPoint);
     setPanels(result);
     if (target && result.length < Math.ceil((target * 1000) / selectedPanel.watt)) {
       toast({ title: "⚠️ Capacity Limited", description: `Target ${target} kW exceeds usable rooftop area. Placed ${result.length} panels (${((result.length * selectedPanel.watt) / 1000).toFixed(2)} kWp).`, variant: "destructive" });
     } else {
       toast({ title: "Auto Fill Complete", description: `${result.length} panels placed${target ? ` for ${target} kW target` : ""}.` });
     }
-  }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast, targetCapacityKW, panelGap, rowGap]);
+  }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast, targetCapacityKW, panelGap, rowGap, startPoint]);
 
   // Manual panel placement with user-defined rows, panels/row, and spacing
   const doManualFill = useCallback(() => {
@@ -252,10 +252,10 @@ function SolarLayoutInner({ project }: { project: any }) {
   useEffect(() => {
     if (roofPath.length >= 3 && isLoaded) {
       const target = targetCapacityKW > 0 ? targetCapacityKW : undefined;
-      const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap);
+      const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap, startPoint);
       setPanels(result);
     }
-  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW, panelGap, rowGap]);
+  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW, panelGap, rowGap, startPoint]);
 
   // Map click handler
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
@@ -282,6 +282,10 @@ function SolarLayoutInner({ project }: { project: any }) {
       ctx.addObstacle(obs);
       toast({ title: "Obstacle Added", description: `Placed at ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
       setActiveTool("none");
+    } else if (activeTool === "start_point") {
+      setStartPoint(pt);
+      toast({ title: "Start Point Set", description: `Panel fill will begin from ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
+      setActiveTool("none");
     } else if (activeTool === "drain") {
       setDrawPoints([...drawPoints, pt]);
       toast({ title: "Drain Point Placed", description: `At ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
@@ -290,7 +294,7 @@ function SolarLayoutInner({ project }: { project: any }) {
       setLatitude(pt.lat);
       setLongitude(pt.lng);
     }
-  }, [activeTool, drawPoints, setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool]);
+  }, [activeTool, drawPoints, setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool, setStartPoint]);
 
   const finishDrawing = useCallback(() => {
     if (activeTool === "roof") {
@@ -321,6 +325,7 @@ function SolarLayoutInner({ project }: { project: any }) {
     setRoofPath([]);
     setPanels([]);
     setDrawPoints([]);
+    setStartPoint(null);
     setActiveTool("none");
   };
 
@@ -896,6 +901,22 @@ function SolarLayoutInner({ project }: { project: any }) {
                 {/* Current location marker */}
                 {roofPath.length === 0 && activeTool === "none" && (
                   <Marker position={{ lat: latitude, lng: longitude }} />
+                )}
+
+                {/* Start point marker */}
+                {startPoint && (
+                  <Marker
+                    position={startPoint}
+                    icon={{
+                      path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                      scale: 7,
+                      fillColor: "#22c55e",
+                      fillOpacity: 1,
+                      strokeColor: "#fff",
+                      strokeWeight: 2,
+                    }}
+                    title="Panel fill start point"
+                  />
                 )}
 
                 {/* Drawing points preview */}

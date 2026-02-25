@@ -8,7 +8,7 @@ import {
   calculateDesignStats, calculateRCCLoad, calculateMetalRoof, checkCompliance,
 } from "@/utils/solarCalculations";
 
-export type DrawTool = "none" | "roof" | "obstacle" | "walkway" | "pipeline" | "safety_edge" | "drain";
+export type DrawTool = "none" | "roof" | "obstacle" | "walkway" | "pipeline" | "safety_edge" | "drain" | "start_point";
 
 interface SolarLayoutState {
   // Target capacity
@@ -90,6 +90,8 @@ interface SolarLayoutState {
   setActiveTool: (v: DrawTool) => void;
   drawPoints: google.maps.LatLngLiteral[];
   setDrawPoints: (v: google.maps.LatLngLiteral[]) => void;
+  startPoint: google.maps.LatLngLiteral | null;
+  setStartPoint: (v: google.maps.LatLngLiteral | null) => void;
 
   // Tabs
   activeTab: string;
@@ -168,6 +170,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   // Drawing
   const [activeTool, setActiveTool] = useState<DrawTool>("none");
   const [drawPoints, setDrawPoints] = useState<google.maps.LatLngLiteral[]>([]);
+  const [startPoint, setStartPoint] = useState<google.maps.LatLngLiteral | null>(null);
 
   // Tabs
   const [activeTab, setActiveTab] = useState("2d");
@@ -272,7 +275,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
     centralWalkwayWidth, setCentralWalkwayWidth, hasPerimeterWalkway, setHasPerimeterWalkway,
     hasCentralWalkway, setHasCentralWalkway,
     pipelines, setPipelines,
-    activeTool, setActiveTool, drawPoints, setDrawPoints,
+    activeTool, setActiveTool, drawPoints, setDrawPoints, startPoint, setStartPoint,
     activeTab, setActiveTab,
     stats, rccDetails, metalRoofDetails, compliance, roofAreaM2, usableAreaM2,
     projectCategory, setProjectCategory,
