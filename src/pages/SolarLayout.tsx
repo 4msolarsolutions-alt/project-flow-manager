@@ -143,6 +143,7 @@ function SolarLayoutInner({ project }: { project: any }) {
     selectedPanelIdx, setSelectedPanelIdx, selectedPanel,
     orientation, setOrientation,
     tiltAngle, setTiltAngle,
+    panelGap, setPanelGap, rowGap, setRowGap,
     roofPath, setRoofPath, safetyBoundary, safetySetback,
     panels, setPanels,
     obstacles, walkways, pipelines,
@@ -194,14 +195,14 @@ function SolarLayoutInner({ project }: { project: any }) {
   const doAutoFill = useCallback(() => {
     if (roofPath.length < 3 || !isLoaded) return;
     const target = targetCapacityKW > 0 ? targetCapacityKW : undefined;
-    const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target);
+    const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap);
     setPanels(result);
     if (target && result.length < Math.ceil((target * 1000) / selectedPanel.watt)) {
       toast({ title: "⚠️ Capacity Limited", description: `Target ${target} kW exceeds usable rooftop area. Placed ${result.length} panels (${((result.length * selectedPanel.watt) / 1000).toFixed(2)} kWp).`, variant: "destructive" });
     } else {
       toast({ title: "Auto Fill Complete", description: `${result.length} panels placed${target ? ` for ${target} kW target` : ""}.` });
     }
-  }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast, targetCapacityKW]);
+  }, [roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, isLoaded, setPanels, toast, targetCapacityKW, panelGap, rowGap]);
 
   // Manual panel placement with user-defined rows, panels/row, and spacing
   const doManualFill = useCallback(() => {
@@ -251,10 +252,10 @@ function SolarLayoutInner({ project }: { project: any }) {
   useEffect(() => {
     if (roofPath.length >= 3 && isLoaded) {
       const target = targetCapacityKW > 0 ? targetCapacityKW : undefined;
-      const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target);
+      const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap);
       setPanels(result);
     }
-  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW]);
+  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW, panelGap, rowGap]);
 
   // Map click handler
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
@@ -697,9 +698,43 @@ function SolarLayoutInner({ project }: { project: any }) {
             </div>
           </div>
 
+          {/* Panel gap & row gap controls */}
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex flex-col gap-1.5 min-w-[120px]">
+              <Label className="text-xs font-medium">Panel Gap (mm)</Label>
+              <input
+                type="number"
+                min={0}
+                max={200}
+                step={1}
+                value={Math.round(panelGap * 1000)}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val >= 0) setPanelGap(val / 1000);
+                }}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 min-w-[120px]">
+              <Label className="text-xs font-medium">Row Gap (mm)</Label>
+              <input
+                type="number"
+                min={0}
+                max={2000}
+                step={10}
+                value={Math.round(rowGap * 1000)}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val >= 0) setRowGap(val / 1000);
+                }}
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+          </div>
+
           {/* Panel dimensions info */}
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground bg-muted/50 rounded px-3 py-1.5">
-            <span>📐 <strong>{selectedPanel.watt}Wp</strong> — {selectedPanel.length}m × {selectedPanel.width}m — {selectedPanel.weight}kg — {selectedPanel.cellType} — η {selectedPanel.efficiency}%</span>
+            <span>📐 <strong>{selectedPanel.watt}Wp</strong> — {selectedPanel.length}m × {selectedPanel.width}m — {selectedPanel.weight}kg — {selectedPanel.cellType} — η {selectedPanel.efficiency}% — Gap: {Math.round(panelGap * 1000)}mm — Row Gap: {Math.round(rowGap * 1000)}mm</span>
           </div>
         </div>
       </Card>

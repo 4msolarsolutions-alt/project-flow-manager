@@ -396,7 +396,9 @@ export function autoFitPanelsOnMap(
   obstacles: ObstacleItem[],
   walkways: WalkwayItem[],
   pipelines: PipelineItem[],
-  targetKW?: number
+  targetKW?: number,
+  panelGap: number = 0.025,
+  rowGap?: number
 ): { north: number; south: number; east: number; west: number }[] {
   const usePath = safetyBoundary.length >= 3 ? safetyBoundary : roofPath;
   if (usePath.length < 3) return [];
@@ -411,9 +413,9 @@ export function autoFitPanelsOnMap(
 
   const panelH = orient === "landscape" ? panel.width : panel.length;
   const panelW = orient === "landscape" ? panel.length : panel.width;
-  const rowSpacing = calculateRowSpacing(panelH, tiltAngle);
-  const effectiveRowH = panelH + Math.max(rowSpacing, 0.3);
-  const effectiveColW = panelW + 0.1;
+  const rowSpacing = rowGap !== undefined ? rowGap : calculateRowSpacing(panelH, tiltAngle);
+  const effectiveRowH = panelH + Math.max(rowSpacing, 0.05);
+  const effectiveColW = panelW + panelGap;
 
   const panelLatSize = metersToLatDeg(effectiveRowH);
   const panelLngSize = metersToLngDeg(effectiveColW, centerLat);
