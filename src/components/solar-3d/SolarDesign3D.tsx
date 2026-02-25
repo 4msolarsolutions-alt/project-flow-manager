@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, type MutableRefObject } from "react";
 import { Canvas } from "@react-three/fiber";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { OrbitControls, Grid, Environment, Sky } from "@react-three/drei";
 import { Building3D } from "./Building3D";
 import { Roof3D } from "./Roof3D";
@@ -16,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Sun, Zap, Battery, BarChart3, Eye,
-  Clock, Box, Cable, Maximize, Minimize,
+  Clock, Box, Cable, Maximize, Minimize, RotateCw,
 } from "lucide-react";
 
 export interface PolygonPoint { lat: number; lng: number; }
@@ -184,6 +185,7 @@ export default function SolarDesign3D({
   buildingHeight = 6,
 }: SolarDesign3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sunHour, setSunHour] = useState(12);
   const [dayOfYear, setDayOfYear] = useState(172);
@@ -362,14 +364,24 @@ export default function SolarDesign3D({
 
       {/* 3D Canvas */}
       <Card className="overflow-hidden relative">
-        <Button
-          size="icon"
-          variant="secondary"
-          className="absolute top-3 right-3 z-10 h-8 w-8"
-          onClick={toggleFullscreen}
-        >
-          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-        </Button>
+        <div className="absolute top-3 right-3 z-10 flex gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 px-3 text-xs"
+            onClick={() => controlsRef.current?.reset()}
+          >
+            <RotateCw className="h-3.5 w-3.5 mr-1" /> Reset Camera
+          </Button>
+          <Button
+            size="icon"
+            variant="secondary"
+            className="h-8 w-8"
+            onClick={toggleFullscreen}
+          >
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          </Button>
+        </div>
 
         <div style={{ width: "100%", height: isFullscreen ? "100vh" : "600px" }}>
           <Canvas
@@ -487,12 +499,14 @@ export default function SolarDesign3D({
             ))}
 
             <OrbitControls
+              ref={controlsRef as any}
               enablePan
               enableZoom
               enableRotate
+              zoomSpeed={1.2}
               maxPolarAngle={Math.PI / 2.05}
-              minDistance={2}
-              maxDistance={sceneRadius * 4}
+              minDistance={10}
+              maxDistance={1000}
               target={[0, 0, 0]}
             />
           </Canvas>

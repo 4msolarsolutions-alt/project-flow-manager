@@ -826,6 +826,18 @@ function SolarLayoutInner({ project }: { project: any }) {
                 onClick={handleMapClick}
                 options={{
                   draggableCursor: activeTool !== "none" ? "crosshair" : undefined,
+                  maxZoom: 22,
+                  minZoom: 15,
+                  scrollwheel: true,
+                  disableDoubleClickZoom: false,
+                  gestureHandling: "greedy",
+                  zoomControl: true,
+                  zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_TOP,
+                  },
+                  mapTypeControl: false,
+                  streetViewControl: false,
+                  fullscreenControl: false,
                 }}
               >
                 {/* Current location marker */}
