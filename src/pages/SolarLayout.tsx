@@ -36,6 +36,7 @@ import { StringConfigPanel } from "@/components/solar-layout/StringConfigPanel";
 import { SLDGeneratorPanel } from "@/components/solar-layout/SLDGeneratorPanel";
 import { EarthingLAPanel } from "@/components/solar-layout/EarthingLAPanel";
 import { GADrawingPanel } from "@/components/solar-layout/GADrawingPanel";
+import { RoofDimensionDiagram } from "@/components/solar-layout/RoofDimensionDiagram";
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
@@ -151,9 +152,10 @@ function SolarLayoutInner({ project }: { project: any }) {
     tiltAngle, setTiltAngle,
     panelGap, setPanelGap, rowGap, setRowGap,
     roofPath, setRoofPath, safetyBoundary, safetySetback,
+    additionalRoofs, addRoof, setAdditionalRoofs,
     panels, setPanels,
     obstacles, walkways, pipelines,
-    activeTool, setActiveTool, drawPoints, setDrawPoints, startPoint, setStartPoint,
+    activeTool, setActiveTool, drawPoints, setDrawPoints, rectStart, setRectStart, startPoint, setStartPoint,
     activeTab, setActiveTab,
     stats, rccDetails, metalRoofDetails, compliance, roofAreaM2, usableAreaM2,
     hasPerimeterWalkway, perimeterWalkwayWidth, hasCentralWalkway, centralWalkwayWidth,
@@ -269,7 +271,7 @@ function SolarLayoutInner({ project }: { project: any }) {
       const result = autoFitPanelsOnMap(roofPath, safetyBoundary, orientation, selectedPanel, tiltAngle, obstacles, walkways, pipelines, target, panelGap, rowGap, startPoint);
       setPanels(result);
     }
-  }, [orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW, panelGap, rowGap, startPoint]);
+  }, [roofPath, orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW, panelGap, rowGap, startPoint]);
 
   // Map click handler
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
@@ -278,8 +280,31 @@ function SolarLayoutInner({ project }: { project: any }) {
 
     if (activeTool === "roof" || activeTool === "walkway" || activeTool === "pipeline" || activeTool === "safety_edge") {
       setDrawPoints([...drawPoints, pt]);
+    } else if (activeTool === "roof_rect") {
+      if (!rectStart) {
+        setRectStart(pt);
+      } else {
+        // Create rectangle roof from two corners
+        const rect: google.maps.LatLngLiteral[] = [
+          { lat: rectStart.lat, lng: rectStart.lng },
+          { lat: rectStart.lat, lng: pt.lng },
+          { lat: pt.lat, lng: pt.lng },
+          { lat: pt.lat, lng: rectStart.lng },
+        ];
+        if (roofPath.length < 3) {
+          setRoofPath(rect);
+          const centerLat = (rectStart.lat + pt.lat) / 2;
+          const centerLng = (rectStart.lng + pt.lng) / 2;
+          setLatitude(centerLat);
+          setLongitude(centerLng);
+        } else {
+          addRoof(rect);
+        }
+        toast({ title: "Rectangle Roof Added", description: `Roof area created.` });
+        setRectStart(null);
+        setActiveTool("none");
+      }
     } else if (activeTool === "obstacle") {
-      // Place obstacle at clicked point
       const obs: import("@/utils/solarCalculations").ObstacleItem = {
         id: crypto.randomUUID(),
         type: "custom",
@@ -308,7 +333,7 @@ function SolarLayoutInner({ project }: { project: any }) {
       setLatitude(pt.lat);
       setLongitude(pt.lng);
     }
-  }, [activeTool, drawPoints, setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool, setStartPoint]);
+  }, [activeTool, drawPoints, setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool, setStartPoint, rectStart, setRectStart, roofPath, setRoofPath, addRoof]);
 
   const finishDrawing = useCallback(() => {
     if (activeTool === "roof") {
@@ -316,11 +341,18 @@ function SolarLayoutInner({ project }: { project: any }) {
         toast({ title: "Need at least 3 points", variant: "destructive" });
         return;
       }
-      setRoofPath(drawPoints);
-      const centerLat = drawPoints.reduce((s, p) => s + p.lat, 0) / drawPoints.length;
-      const centerLng = drawPoints.reduce((s, p) => s + p.lng, 0) / drawPoints.length;
-      setLatitude(centerLat);
-      setLongitude(centerLng);
+      if (roofPath.length < 3) {
+        // First roof — set as primary
+        setRoofPath(drawPoints);
+        const centerLat = drawPoints.reduce((s, p) => s + p.lat, 0) / drawPoints.length;
+        const centerLng = drawPoints.reduce((s, p) => s + p.lng, 0) / drawPoints.length;
+        setLatitude(centerLat);
+        setLongitude(centerLng);
+      } else {
+        // Additional roof
+        addRoof(drawPoints);
+        toast({ title: "Additional Roof Added", description: `Now ${additionalRoofs.length + 2} roof areas total.` });
+      }
     } else if (activeTool === "walkway" && drawPoints.length >= 2) {
       ctx.setWalkways([...ctx.walkways, { id: crypto.randomUUID(), type: "custom", width: 0.6, path: drawPoints }]);
       toast({ title: "Walkway Added" });
@@ -333,12 +365,14 @@ function SolarLayoutInner({ project }: { project: any }) {
     }
     setDrawPoints([]);
     setActiveTool("none");
-  }, [activeTool, drawPoints, setRoofPath, setDrawPoints, setActiveTool, setLatitude, setLongitude, toast, ctx]);
+  }, [activeTool, drawPoints, roofPath, setRoofPath, setDrawPoints, setActiveTool, setLatitude, setLongitude, toast, ctx, addRoof, additionalRoofs]);
 
   const handleClear = () => {
     setRoofPath([]);
+    setAdditionalRoofs([]);
     setPanels([]);
     setDrawPoints([]);
+    setRectStart(null);
     setStartPoint(null);
     setActiveTool("none");
   };
@@ -900,7 +934,20 @@ function SolarLayoutInner({ project }: { project: any }) {
           {/* Drawing instructions */}
           {activeTool !== "none" && (
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-700 dark:text-amber-300">
-              🖱️ <strong>Click on the map</strong> to place points. Click <strong>"Finish"</strong> when done.
+              {activeTool === "roof_rect" 
+                ? "🖱️ Click the first corner, then click the opposite corner to create a rectangular roof."
+                : "🖱️ Click on the map to place points. Click \"Finish\" when done."
+              }
+              {roofPath.length >= 3 && (activeTool === "roof" || activeTool === "roof_rect") && (
+                <span className="ml-2 font-semibold">This will be added as an additional roof area.</span>
+              )}
+            </div>
+          )}
+
+          {/* Rectangle drawing preview */}
+          {activeTool === "roof_rect" && rectStart && (
+            <div className="p-2 bg-primary/10 border border-primary/30 rounded-lg text-xs text-primary">
+              📍 First corner placed at {rectStart.lat.toFixed(5)}°, {rectStart.lng.toFixed(5)}° — now click the opposite corner.
             </div>
           )}
 
@@ -989,6 +1036,57 @@ function SolarLayoutInner({ project }: { project: any }) {
                   />
                 )}
 
+                {/* Additional roof polygons */}
+                {additionalRoofs.map((roof, idx) => (
+                  <Polygon
+                    key={`add-roof-${idx}`}
+                    paths={roof}
+                    options={{ fillColor: "#ffeb3b", fillOpacity: 0.15, strokeColor: "#e91e63", strokeWeight: 2, clickable: false }}
+                  />
+                ))}
+
+                {/* Rectangle drag preview */}
+                {activeTool === "roof_rect" && rectStart && (
+                  <Marker
+                    position={rectStart}
+                    icon={{
+                      path: google.maps.SymbolPath.CIRCLE,
+                      scale: 8,
+                      fillColor: "#4ade80",
+                      fillOpacity: 1,
+                      strokeColor: "#fff",
+                      strokeWeight: 2,
+                    }}
+                  />
+                )}
+
+                {/* Dimension labels on roof edges */}
+                {roofPath.length >= 3 && activeTool === "none" && roofPath.map((pt, i) => {
+                  const next = roofPath[(i + 1) % roofPath.length];
+                  const midLat = (pt.lat + next.lat) / 2;
+                  const midLng = (pt.lng + next.lng) / 2;
+                  const dx = (next.lng - pt.lng) * 111320 * Math.cos((midLat * Math.PI) / 180);
+                  const dz = (next.lat - pt.lat) * 111320;
+                  const dist = Math.sqrt(dx * dx + dz * dz);
+                  return (
+                    <Marker
+                      key={`dim-${i}`}
+                      position={{ lat: midLat, lng: midLng }}
+                      icon={{
+                        path: "M 0 0",
+                        scale: 0,
+                      }}
+                      label={{
+                        text: `${dist.toFixed(1)}m`,
+                        color: "#ffffff",
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        className: "bg-black/70 px-1 rounded text-[10px]",
+                      }}
+                    />
+                  );
+                })}
+
                 {/* Safety boundary */}
                 {safetyBoundary.length > 0 && activeTool !== "roof" && (
                   <Polygon
@@ -1037,6 +1135,9 @@ function SolarLayoutInner({ project }: { project: any }) {
 
           {/* Stats */}
           <StatsPanel />
+
+          {/* Dimension Diagram */}
+          <RoofDimensionDiagram />
         </TabsContent>
 
         <TabsContent value="3d" className="mt-3">
