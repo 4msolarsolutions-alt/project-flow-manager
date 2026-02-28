@@ -8,7 +8,7 @@ import {
   calculateDesignStats, calculateRCCLoad, calculateMetalRoof, checkCompliance,
 } from "@/utils/solarCalculations";
 
-export type DrawTool = "none" | "roof" | "obstacle" | "walkway" | "pipeline" | "safety_edge" | "drain" | "start_point";
+export type DrawTool = "none" | "roof" | "roof_rect" | "obstacle" | "walkway" | "pipeline" | "safety_edge" | "drain" | "start_point";
 
 interface SolarLayoutState {
   // Target capacity
@@ -55,6 +55,10 @@ interface SolarLayoutState {
   // Roof polygon
   roofPath: google.maps.LatLngLiteral[];
   setRoofPath: (v: google.maps.LatLngLiteral[]) => void;
+  additionalRoofs: google.maps.LatLngLiteral[][];
+  setAdditionalRoofs: (v: google.maps.LatLngLiteral[][]) => void;
+  addRoof: (roof: google.maps.LatLngLiteral[]) => void;
+  removeRoof: (index: number) => void;
   safetyBoundary: google.maps.LatLngLiteral[];
   safetySetback: number;
   setSafetySetback: (v: number) => void;
@@ -90,6 +94,8 @@ interface SolarLayoutState {
   setActiveTool: (v: DrawTool) => void;
   drawPoints: google.maps.LatLngLiteral[];
   setDrawPoints: (v: google.maps.LatLngLiteral[]) => void;
+  rectStart: google.maps.LatLngLiteral | null;
+  setRectStart: (v: google.maps.LatLngLiteral | null) => void;
   startPoint: google.maps.LatLngLiteral | null;
   setStartPoint: (v: google.maps.LatLngLiteral | null) => void;
 
@@ -149,6 +155,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
 
   // Roof polygon
   const [roofPath, setRoofPath] = useState<google.maps.LatLngLiteral[]>([]);
+  const [additionalRoofs, setAdditionalRoofs] = useState<google.maps.LatLngLiteral[][]>([]);
   const [safetySetback, setSafetySetback] = useState(0.6);
 
   // Panels
@@ -170,6 +177,7 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
   // Drawing
   const [activeTool, setActiveTool] = useState<DrawTool>("none");
   const [drawPoints, setDrawPoints] = useState<google.maps.LatLngLiteral[]>([]);
+  const [rectStart, setRectStart] = useState<google.maps.LatLngLiteral | null>(null);
   const [startPoint, setStartPoint] = useState<google.maps.LatLngLiteral | null>(null);
 
   // Tabs
@@ -240,6 +248,8 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
 
   const addObstacle = useCallback((o: ObstacleItem) => setObstacles((prev) => [...prev, o]), []);
   const removeObstacle = useCallback((id: string) => setObstacles((prev) => prev.filter((o) => o.id !== id)), []);
+  const addRoof = useCallback((roof: google.maps.LatLngLiteral[]) => setAdditionalRoofs((prev) => [...prev, roof]), []);
+  const removeRoof = useCallback((index: number) => setAdditionalRoofs((prev) => prev.filter((_, i) => i !== index)), []);
 
   // Auto-set tilt from latitude
   useEffect(() => {
@@ -268,14 +278,15 @@ export function SolarLayoutProvider({ children, initialLatitude = 13.0827, initi
     purlinSpacing, setPurlinSpacing, clampType, setClampType,
     selectedPanelIdx, setSelectedPanelIdx, selectedPanel, orientation, setOrientation, tiltAngle, setTiltAngle,
     panelGap, setPanelGap, rowGap, setRowGap,
-    roofPath, setRoofPath, safetyBoundary, safetySetback, setSafetySetback,
+    roofPath, setRoofPath, additionalRoofs, setAdditionalRoofs, addRoof, removeRoof,
+    safetyBoundary, safetySetback, setSafetySetback,
     panels, setPanels,
     obstacles, setObstacles, addObstacle, removeObstacle,
     walkways, setWalkways, perimeterWalkwayWidth, setPerimeterWalkwayWidth,
     centralWalkwayWidth, setCentralWalkwayWidth, hasPerimeterWalkway, setHasPerimeterWalkway,
     hasCentralWalkway, setHasCentralWalkway,
     pipelines, setPipelines,
-    activeTool, setActiveTool, drawPoints, setDrawPoints, startPoint, setStartPoint,
+    activeTool, setActiveTool, drawPoints, setDrawPoints, rectStart, setRectStart, startPoint, setStartPoint,
     activeTab, setActiveTab,
     stats, rccDetails, metalRoofDetails, compliance, roofAreaM2, usableAreaM2,
     projectCategory, setProjectCategory,
