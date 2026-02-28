@@ -14,7 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GoogleMap, useJsApiLoader, Polygon, Rectangle, Marker, Polyline, Autocomplete } from "@react-google-maps/api";
 import {
   Loader2, Save, Sun, Zap, ArrowLeft, RotateCw, Ruler,
-  FileText, Map, Box, Download, MapPin, Grid3X3, AlertTriangle, Sparkles,
+  FileText, Map, Box, Download, MapPin, Grid3X3, AlertTriangle, Sparkles, Cable,
 } from "lucide-react";
 import { useQuotations } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
@@ -32,6 +32,7 @@ import { PANEL_OPTIONS, autoFitPanelsOnMap, metersToLatDeg, metersToLngDeg, shri
 import { exportSolarPlan, capture2DLayout, capture3DLayout } from "@/utils/solarPlanExport";
 import { useSolarAPI } from "@/hooks/useSolarAPI";
 import { SolarInsightsPanel } from "@/components/solar-layout/SolarInsightsPanel";
+import { StringConfigPanel } from "@/components/solar-layout/StringConfigPanel";
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
@@ -842,14 +843,17 @@ function SolarLayoutInner({ project }: { project: any }) {
         />
       </div>
 
-      {/* Tabs: 2D / 3D */}
+      {/* Tabs: 2D / 3D / String Config */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="2d" className="flex items-center gap-2">
             <Map className="h-4 w-4" /> 2D Satellite
           </TabsTrigger>
           <TabsTrigger value="3d" className="flex items-center gap-2">
-            <Box className="h-4 w-4" /> 3D Design Engine
+            <Box className="h-4 w-4" /> 3D Engine
+          </TabsTrigger>
+          <TabsTrigger value="string" className="flex items-center gap-2">
+            <Cable className="h-4 w-4" /> String Config
           </TabsTrigger>
         </TabsList>
 
@@ -1047,6 +1051,10 @@ function SolarLayoutInner({ project }: { project: any }) {
               latitude={latitude}
             />
           </Suspense>
+        </TabsContent>
+
+        <TabsContent value="string" className="mt-3">
+          <StringConfigPanel />
         </TabsContent>
       </Tabs>
     </AppLayout>
