@@ -33,6 +33,9 @@ import { exportSolarPlan, capture2DLayout, capture3DLayout } from "@/utils/solar
 import { useSolarAPI } from "@/hooks/useSolarAPI";
 import { SolarInsightsPanel } from "@/components/solar-layout/SolarInsightsPanel";
 import { StringConfigPanel } from "@/components/solar-layout/StringConfigPanel";
+import { SLDGeneratorPanel } from "@/components/solar-layout/SLDGeneratorPanel";
+import { EarthingLAPanel } from "@/components/solar-layout/EarthingLAPanel";
+import { GADrawingPanel } from "@/components/solar-layout/GADrawingPanel";
 
 const SolarDesign3D = lazy(() => import("@/components/solar-3d/SolarDesign3D"));
 
@@ -843,17 +846,26 @@ function SolarLayoutInner({ project }: { project: any }) {
         />
       </div>
 
-      {/* Tabs: 2D / 3D / String Config */}
+      {/* Tabs: 2D / 3D / String Config / SLD / Earthing / GA */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
-          <TabsTrigger value="2d" className="flex items-center gap-2">
-            <Map className="h-4 w-4" /> 2D Satellite
+        <TabsList className="flex w-full max-w-4xl overflow-x-auto">
+          <TabsTrigger value="2d" className="flex items-center gap-1 text-xs">
+            <Map className="h-3.5 w-3.5" /> Site Layout
           </TabsTrigger>
-          <TabsTrigger value="3d" className="flex items-center gap-2">
-            <Box className="h-4 w-4" /> 3D Engine
+          <TabsTrigger value="3d" className="flex items-center gap-1 text-xs">
+            <Box className="h-3.5 w-3.5" /> 3D View
           </TabsTrigger>
-          <TabsTrigger value="string" className="flex items-center gap-2">
-            <Cable className="h-4 w-4" /> String Config
+          <TabsTrigger value="string" className="flex items-center gap-1 text-xs">
+            <Cable className="h-3.5 w-3.5" /> String Config
+          </TabsTrigger>
+          <TabsTrigger value="sld" className="flex items-center gap-1 text-xs">
+            <Zap className="h-3.5 w-3.5" /> SLD
+          </TabsTrigger>
+          <TabsTrigger value="earthing" className="flex items-center gap-1 text-xs">
+            <Sparkles className="h-3.5 w-3.5" /> Earthing & LA
+          </TabsTrigger>
+          <TabsTrigger value="ga" className="flex items-center gap-1 text-xs">
+            <FileText className="h-3.5 w-3.5" /> GA Drawing
           </TabsTrigger>
         </TabsList>
 
@@ -1055,6 +1067,18 @@ function SolarLayoutInner({ project }: { project: any }) {
 
         <TabsContent value="string" className="mt-3">
           <StringConfigPanel />
+        </TabsContent>
+
+        <TabsContent value="sld" className="mt-3">
+          <SLDGeneratorPanel />
+        </TabsContent>
+
+        <TabsContent value="earthing" className="mt-3">
+          <EarthingLAPanel />
+        </TabsContent>
+
+        <TabsContent value="ga" className="mt-3">
+          <GADrawingPanel />
         </TabsContent>
       </Tabs>
     </AppLayout>
