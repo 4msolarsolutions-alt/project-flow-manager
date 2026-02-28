@@ -273,38 +273,54 @@ function SolarLayoutInner({ project }: { project: any }) {
     }
   }, [roofPath, orientation, selectedPanelIdx, tiltAngle, safetySetback, hasPerimeterWalkway, hasCentralWalkway, obstacles.length, targetCapacityKW, panelGap, rowGap, startPoint]);
 
-  // Map click handler
+  // Use refs to avoid stale closures in Google Maps event handlers
+  const activeToolRef = useRef(activeTool);
+  activeToolRef.current = activeTool;
+  const drawPointsRef = useRef(drawPoints);
+  drawPointsRef.current = drawPoints;
+  const rectStartRef = useRef(rectStart);
+  rectStartRef.current = rectStart;
+  const roofPathRef = useRef(roofPath);
+  roofPathRef.current = roofPath;
+
+  // Map click handler — uses refs to always have fresh state
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
     const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    const tool = activeToolRef.current;
+    const currentRectStart = rectStartRef.current;
+    const currentRoofPath = roofPathRef.current;
 
-    if (activeTool === "roof" || activeTool === "walkway" || activeTool === "pipeline" || activeTool === "safety_edge") {
-      setDrawPoints([...drawPoints, pt]);
-    } else if (activeTool === "roof_rect") {
-      if (!rectStart) {
+    console.log("[SolarLayout] Map click:", { tool, pt, hasRectStart: !!currentRectStart, roofPathLen: currentRoofPath.length });
+
+    if (tool === "roof" || tool === "walkway" || tool === "pipeline" || tool === "safety_edge") {
+      setDrawPoints([...drawPointsRef.current, pt]);
+    } else if (tool === "roof_rect") {
+      if (!currentRectStart) {
         setRectStart(pt);
+        toast({ title: "First Corner Set", description: `Now click the opposite corner.` });
       } else {
         // Create rectangle roof from two corners
         const rect: google.maps.LatLngLiteral[] = [
-          { lat: rectStart.lat, lng: rectStart.lng },
-          { lat: rectStart.lat, lng: pt.lng },
+          { lat: currentRectStart.lat, lng: currentRectStart.lng },
+          { lat: currentRectStart.lat, lng: pt.lng },
           { lat: pt.lat, lng: pt.lng },
-          { lat: pt.lat, lng: rectStart.lng },
+          { lat: pt.lat, lng: currentRectStart.lng },
         ];
-        if (roofPath.length < 3) {
+        if (currentRoofPath.length < 3) {
           setRoofPath(rect);
-          const centerLat = (rectStart.lat + pt.lat) / 2;
-          const centerLng = (rectStart.lng + pt.lng) / 2;
+          const centerLat = (currentRectStart.lat + pt.lat) / 2;
+          const centerLng = (currentRectStart.lng + pt.lng) / 2;
           setLatitude(centerLat);
           setLongitude(centerLng);
         } else {
           addRoof(rect);
         }
-        toast({ title: "Rectangle Roof Added", description: `Roof area created.` });
+        toast({ title: "Rectangle Roof Added", description: `Roof area created with panels auto-filled.` });
         setRectStart(null);
         setActiveTool("none");
       }
-    } else if (activeTool === "obstacle") {
+    } else if (tool === "obstacle") {
       const obs: import("@/utils/solarCalculations").ObstacleItem = {
         id: crypto.randomUUID(),
         type: "custom",
@@ -321,51 +337,55 @@ function SolarLayoutInner({ project }: { project: any }) {
       ctx.addObstacle(obs);
       toast({ title: "Obstacle Added", description: `Placed at ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
       setActiveTool("none");
-    } else if (activeTool === "start_point") {
+    } else if (tool === "start_point") {
       setStartPoint(pt);
       toast({ title: "Start Point Set", description: `Panel fill will begin from ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
       setActiveTool("none");
-    } else if (activeTool === "drain") {
-      setDrawPoints([...drawPoints, pt]);
+    } else if (tool === "drain") {
+      setDrawPoints([...drawPointsRef.current, pt]);
       toast({ title: "Drain Point Placed", description: `At ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` });
       setActiveTool("none");
-    } else if (activeTool === "none") {
+    } else if (tool === "none") {
       setLatitude(pt.lat);
       setLongitude(pt.lng);
     }
-  }, [activeTool, drawPoints, setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool, setStartPoint, rectStart, setRectStart, roofPath, setRoofPath, addRoof]);
+  }, [setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool, setStartPoint, setRectStart, setRoofPath, addRoof]);
 
   const finishDrawing = useCallback(() => {
-    if (activeTool === "roof") {
-      if (drawPoints.length < 3) {
+    const tool = activeToolRef.current;
+    const currentDrawPoints = drawPointsRef.current;
+    const currentRoofPath = roofPathRef.current;
+    
+    if (tool === "roof") {
+      if (currentDrawPoints.length < 3) {
         toast({ title: "Need at least 3 points", variant: "destructive" });
         return;
       }
-      if (roofPath.length < 3) {
+      if (currentRoofPath.length < 3) {
         // First roof — set as primary
-        setRoofPath(drawPoints);
-        const centerLat = drawPoints.reduce((s, p) => s + p.lat, 0) / drawPoints.length;
-        const centerLng = drawPoints.reduce((s, p) => s + p.lng, 0) / drawPoints.length;
+        setRoofPath(currentDrawPoints);
+        const centerLat = currentDrawPoints.reduce((s, p) => s + p.lat, 0) / currentDrawPoints.length;
+        const centerLng = currentDrawPoints.reduce((s, p) => s + p.lng, 0) / currentDrawPoints.length;
         setLatitude(centerLat);
         setLongitude(centerLng);
       } else {
         // Additional roof
-        addRoof(drawPoints);
+        addRoof(currentDrawPoints);
         toast({ title: "Additional Roof Added", description: `Now ${additionalRoofs.length + 2} roof areas total.` });
       }
-    } else if (activeTool === "walkway" && drawPoints.length >= 2) {
-      ctx.setWalkways([...ctx.walkways, { id: crypto.randomUUID(), type: "custom", width: 0.6, path: drawPoints }]);
+    } else if (tool === "walkway" && currentDrawPoints.length >= 2) {
+      ctx.setWalkways([...ctx.walkways, { id: crypto.randomUUID(), type: "custom", width: 0.6, path: currentDrawPoints }]);
       toast({ title: "Walkway Added" });
-    } else if (activeTool === "pipeline" && drawPoints.length >= 2) {
-      ctx.setPipelines([...ctx.pipelines, { id: crypto.randomUUID(), width: 0.15, clearance: 0.3, path: drawPoints }]);
+    } else if (tool === "pipeline" && currentDrawPoints.length >= 2) {
+      ctx.setPipelines([...ctx.pipelines, { id: crypto.randomUUID(), width: 0.15, clearance: 0.3, path: currentDrawPoints }]);
       toast({ title: "Pipeline Added" });
-    } else if (activeTool === "safety_edge" && drawPoints.length >= 3) {
+    } else if (tool === "safety_edge" && currentDrawPoints.length >= 3) {
       ctx.setSafetySetback(0.6);
       toast({ title: "Safety Edge Updated" });
     }
     setDrawPoints([]);
     setActiveTool("none");
-  }, [activeTool, drawPoints, roofPath, setRoofPath, setDrawPoints, setActiveTool, setLatitude, setLongitude, toast, ctx, addRoof, additionalRoofs]);
+  }, [setRoofPath, setDrawPoints, setActiveTool, setLatitude, setLongitude, toast, ctx, addRoof, additionalRoofs]);
 
   const handleClear = () => {
     setRoofPath([]);
