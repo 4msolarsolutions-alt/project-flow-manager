@@ -998,7 +998,6 @@ function SolarLayoutInner({ project }: { project: any }) {
                 zoom={20}
                 mapTypeId="satellite"
                 onLoad={onMapLoad}
-                onClick={handleMapClickImpl}
                 options={{
                   draggableCursor: activeTool !== "none" ? "crosshair" : undefined,
                   maxZoom: 22,
