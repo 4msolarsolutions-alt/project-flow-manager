@@ -567,8 +567,16 @@ function SolarLayoutInner({ project }: { project: any }) {
     }
   };
 
+  // Ref-based click handler for native Google Maps listener
+  const mapClickHandlerRef = useRef(handleMapClickImpl);
+  mapClickHandlerRef.current = handleMapClickImpl;
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
+    // Attach click listener natively — bypasses React prop caching issues
+    map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      mapClickHandlerRef.current(e);
+    });
   }, []);
 
   // Pan map when coordinates change + reverse geocode
@@ -990,7 +998,6 @@ function SolarLayoutInner({ project }: { project: any }) {
                 zoom={20}
                 mapTypeId="satellite"
                 onLoad={onMapLoad}
-                onClick={handleMapClickImpl}
                 options={{
                   draggableCursor: activeTool !== "none" ? "crosshair" : undefined,
                   maxZoom: 22,
