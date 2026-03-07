@@ -282,14 +282,20 @@ function SolarLayoutInner({ project }: { project: any }) {
   rectStartRef.current = rectStart;
   const roofPathRef = useRef(roofPath);
   roofPathRef.current = roofPath;
+  const latRef = useRef(latitude);
+  latRef.current = latitude;
+  const lngRef = useRef(longitude);
+  lngRef.current = longitude;
 
-  // Map click handler — uses refs to always have fresh state
-  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+  // Stable map click handler that NEVER changes reference — critical for Google Maps
+  const handleMapClickImpl = useCallback((e: google.maps.MapMouseEvent) => {
     if (!e.latLng) return;
     const pt = { lat: e.latLng.lat(), lng: e.latLng.lng() };
     const tool = activeToolRef.current;
     const currentRectStart = rectStartRef.current;
     const currentRoofPath = roofPathRef.current;
+    const currentLat = latRef.current;
+    const currentLng = lngRef.current;
 
     console.log("[SolarLayout] Map click:", { tool, pt, hasRectStart: !!currentRectStart, roofPathLen: currentRoofPath.length });
 
@@ -325,9 +331,9 @@ function SolarLayoutInner({ project }: { project: any }) {
         id: crypto.randomUUID(),
         type: "custom",
         position: [
-          (pt.lng - longitude) * 111320 * Math.cos((latitude * Math.PI) / 180),
+          (pt.lng - currentLng) * 111320 * Math.cos((currentLat * Math.PI) / 180),
           1.5,
-          (pt.lat - latitude) * 111320,
+          (pt.lat - currentLat) * 111320,
         ],
         length: 1.5,
         width: 1.5,
@@ -349,7 +355,7 @@ function SolarLayoutInner({ project }: { project: any }) {
       setLatitude(pt.lat);
       setLongitude(pt.lng);
     }
-  }, [setDrawPoints, setLatitude, setLongitude, latitude, longitude, ctx, toast, setActiveTool, setStartPoint, setRectStart, setRoofPath, addRoof]);
+  }, []); // Empty deps — uses refs for ALL state access
 
   const finishDrawing = useCallback(() => {
     const tool = activeToolRef.current;
